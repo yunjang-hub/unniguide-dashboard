@@ -1,0 +1,16 @@
+# 데이터 파일 (민감정보 - 절대 업로드 금지)
+*.xlsx
+*.csv
+*.xls
+
+# 생성된 HTML 리포트
+*.html
+
+# 시스템
+.DS_Store
+__pycache__/
+*.pyc
+.omc/
+
+# Streamlit
+.streamlit/cache/
