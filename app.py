@@ -517,8 +517,8 @@ st.markdown(f"""
 # ============================================================
 # 탭
 # ============================================================
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-    "📊 Overview", "🌍 국적 분석", "🏥 병원 분석", "💉 시술 트렌드", "⚠️ 취소/No-show", "📋 원본 데이터"
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+    "📊 Overview", "🌍 국적 분석", "🏥 병원 분석", "💉 시술 트렌드", "⚠️ 취소/No-show", "📋 원본 데이터", "📦 리포트 생성"
 ])
 
 # 공통: 최신월/전월
@@ -1051,3 +1051,132 @@ with tab6:
             df_d = df_all[mask][avail].sort_values('월', ascending=False)
             st.dataframe(df_d, use_container_width=True, hide_index=True, height=500)
             st.download_button("CSV 다운로드", df_d.to_csv(index=False).encode('utf-8-sig'), "전체예약_필터.csv", "text/csv")
+
+
+# ============================================================
+# Tab 7: 리포트 생성 (팀원 누구나 사용 가능)
+# ============================================================
+with tab7:
+    st.subheader("📦 병원용 HTML 리포트 생성")
+    st.caption("버튼 클릭 한 번으로 공통 리포트 + 병원별 34개 리포트를 생성하여 ZIP 파일로 다운로드합니다.")
+
+    st.markdown("**생성 기준월 선택**")
+    report_month = st.selectbox(
+        "리포트 월",
+        options=all_months,
+        index=len(all_months) - 1 if all_months else 0,
+        format_func=lambda x: f"{x} ({datetime.strptime(x + '-01', '%Y-%m-%d').strftime('%Y년 %m월')})",
+        key="report_month_sel",
+    )
+
+    st.markdown("")
+    st.info("""
+**생성 프로세스:**
+1. 아래 버튼 클릭 → 스크립트 실행 (약 10-30초 소요)
+2. ZIP 파일 자동 다운로드
+3. 압축 풀면 공통 리포트 + 병원별 34개 HTML 파일
+4. 각 병원에 카톡/이메일로 개별 전달
+    """)
+
+    if st.button("🚀 리포트 일괄 생성 + ZIP 다운로드", type="primary", use_container_width=True):
+        import subprocess
+        import zipfile
+        import tempfile
+        import shutil
+
+        with st.spinner(f"{report_month} 리포트 생성 중..."):
+            try:
+                # Google Sheets URL에서 임시 xlsx 다운로드
+                import urllib.request
+                tmp_xlsx = "/tmp/unniguide_report_input.xlsx"
+                urllib.request.urlretrieve(
+                    f"https://docs.google.com/spreadsheets/d/{GSHEET_ID_MAIN}/export?format=xlsx",
+                    tmp_xlsx,
+                )
+
+                # generate_report.py 실행
+                script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "generate_report.py")
+                result = subprocess.run(
+                    ["python3", script_path, tmp_xlsx, report_month],
+                    capture_output=True, text=True, timeout=300,
+                )
+
+                if result.returncode != 0:
+                    st.error(f"리포트 생성 실패: {result.stderr[:500]}")
+                else:
+                    st.success("리포트 생성 완료!")
+
+                    # ZIP 만들기
+                    output_dir = os.path.dirname(os.path.abspath(__file__))
+                    month_str = report_month.replace("-", "")
+                    common_html = os.path.join(output_dir, f"unniguide_report_{month_str}.html")
+                    hospital_dir = os.path.join(output_dir, "hospitals")
+
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".zip") as tmp_zip:
+                        zip_path = tmp_zip.name
+
+                    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
+                        if os.path.exists(common_html):
+                            zf.write(common_html, f"00_공통_트렌드_리포트_{month_str}.html")
+                        if os.path.exists(hospital_dir):
+                            for fname in os.listdir(hospital_dir):
+                                if fname.endswith(f"_{month_str}.html"):
+                                    zf.write(
+                                        os.path.join(hospital_dir, fname),
+                                        f"병원별/{fname}",
+                                    )
+
+                    with open(zip_path, 'rb') as f:
+                        zip_bytes = f.read()
+
+                    st.download_button(
+                        label=f"📥 언니가이드_리포트_{month_str}.zip 다운로드",
+                        data=zip_bytes,
+                        file_name=f"언니가이드_리포트_{month_str}.zip",
+                        mime="application/zip",
+                        use_container_width=True,
+                    )
+
+                    # 실행 로그
+                    with st.expander("실행 로그 보기"):
+                        st.code(result.stdout)
+
+            except Exception as e:
+                st.error(f"오류 발생: {str(e)}")
+
+    st.divider()
+
+    st.subheader("📄 제휴사용 센터 리포트 생성")
+    st.caption("아모레퍼시픽 등 외부 제휴 브랜드 공유용 원페이지 HTML 리포트 (A4 PDF 인쇄 최적화)")
+
+    if st.button("🏢 제휴사용 리포트 생성", use_container_width=True):
+        import subprocess
+        with st.spinner("제휴사용 리포트 생성 중..."):
+            try:
+                script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "generate_partner_report.py")
+                result = subprocess.run(
+                    ["python3", script_path],
+                    capture_output=True, text=True, timeout=120,
+                )
+
+                if result.returncode != 0:
+                    st.error(f"생성 실패: {result.stderr[:500]}")
+                else:
+                    output_dir = os.path.dirname(os.path.abspath(__file__))
+                    html_path = os.path.join(output_dir, "unniguide_center_report_202603.html")
+                    if os.path.exists(html_path):
+                        with open(html_path, 'r', encoding='utf-8') as f:
+                            html_content = f.read()
+                        st.success("제휴사용 리포트 생성 완료!")
+                        st.download_button(
+                            label="📥 제휴사용_센터_리포트.html 다운로드",
+                            data=html_content.encode('utf-8'),
+                            file_name="언니가이드_센터_리포트.html",
+                            mime="text/html",
+                            use_container_width=True,
+                        )
+                        st.caption("💡 다운로드한 HTML을 브라우저에서 열고 Cmd+P → PDF로 저장하면 제휴사 공유용 PDF가 됩니다.")
+                    else:
+                        st.error("리포트 파일을 찾을 수 없습니다.")
+            except Exception as e:
+                st.error(f"오류: {str(e)}")
