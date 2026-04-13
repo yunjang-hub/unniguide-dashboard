@@ -172,7 +172,16 @@ def load_operation_excel(file_path):
         file_path = tmp
 
     # 예약 시트
-    df_res = pd.read_excel(file_path, sheet_name='언니가이드 예약확정 시트 데일리', header=1)
+    # 시트 이름 호환: 로컬 Excel vs Google Sheets
+    xls = pd.ExcelFile(file_path)
+    res_sheet = None
+    for name in xls.sheet_names:
+        if '예약확정' in name:
+            res_sheet = name
+            break
+    if res_sheet is None:
+        raise ValueError(f"예약확정 시트를 찾을 수 없습니다. 시트 목록: {xls.sheet_names}")
+    df_res = pd.read_excel(file_path, sheet_name=res_sheet, header=1)
     expected_cols = [
         'NO', '채팅접수일자', '예약확정일', '담당자', '고객명', '그룹여부',
         '고객국적', '사용언어', '예약상태', '통역서비스요청', '종류',
@@ -197,7 +206,15 @@ def load_operation_excel(file_path):
 
     # 정산 시트 (openpyxl)
     wb = openpyxl.load_workbook(file_path, read_only=True, data_only=True)
-    ws2 = wb['병원별 정산 및 언니가이드 매출 데이터']
+    # 시트 이름 호환: 로컬 Excel vs Google Sheets
+    settle_sheet = None
+    for name in wb.sheetnames:
+        if '정산' in name:
+            settle_sheet = name
+            break
+    if settle_sheet is None:
+        raise ValueError(f"정산 시트를 찾을 수 없습니다. 시트 목록: {wb.sheetnames}")
+    ws2 = wb[settle_sheet]
     settlement_records = []
     current_month = None
     for row in ws2.iter_rows(min_row=1, max_row=ws2.max_row, values_only=False):
