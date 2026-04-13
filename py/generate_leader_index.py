@@ -212,7 +212,7 @@ body {{ font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR',s
 <!-- Sticky Nav -->
 <div class="top-nav">
   <div class="top-nav-inner">
-    <a href="index.html" class="active">🏠 리더 인덱스</a>
+    <a href="index.html" class="active">🏠 Index</a>
     <a href="unniguide_report_{month_str}.html">📈 전체 트렌드</a>
     <a href="#hospitals-section">🏥 병원별 리포트</a>
     <div class="spacer"></div>
@@ -222,7 +222,7 @@ body {{ font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR',s
 
 <div class="header">
   <div class="header-inner">
-    <div class="logo">UNNI GUIDE · LEADER VIEW</div>
+    <div class="logo">UNNI GUIDE</div>
     <h1>📊 병원 리포트 인덱스</h1>
     <div class="sub">{report_month_kr} · 파트너 병원 {total}개 성과 한눈에 보기</div>
   </div>
@@ -280,8 +280,8 @@ function filterHospitals(query) {{
 </script>
 
 <div class="footer">
-  <strong>UNNI GUIDE</strong> · 리더 비교 대시보드 | 생성일: {datetime.now().strftime('%Y.%m.%d')}
-  <br>본 페이지는 내부 리더 전용 자료입니다.
+  <strong>UNNI GUIDE</strong> · Index | 생성일: {datetime.now().strftime('%Y.%m.%d')}
+  <br>본 페이지는 내부 자료입니다.
 </div>
 
 </body></html>"""
@@ -289,5 +289,5 @@ function filterHospitals(query) {{
 out = os.path.join(OUTPUT_DIR, f'index.html')
 with open(out, 'w', encoding='utf-8') as f:
     f.write(html)
-print(f"✅ 리더 인덱스 생성: {out}")
+print(f"✅ Index 생성: {out}")
 print(f"   상위 20% ({top_20_threshold}개) 매출 비중: {top_share:.1f}%")

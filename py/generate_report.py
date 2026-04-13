@@ -677,7 +677,7 @@ FOOTER = f"""
 TOP_NAV_HTML = lambda current, hospital_path_prefix='': f"""
 <div class="top-nav">
   <div class="top-nav-inner">
-    <a href="{hospital_path_prefix}index.html" class="{'active' if current == 'index' else ''}">🏠 리더 인덱스</a>
+    <a href="{hospital_path_prefix}index.html" class="{'active' if current == 'index' else ''}">🏠 Index</a>
     <a href="{hospital_path_prefix}unniguide_report_{REPORT_MONTH.replace('-','')}.html" class="{'active' if current == 'common' else ''}">📈 전체 트렌드</a>
     <a href="{hospital_path_prefix}index.html#hospitals-section" class="{'active' if current == 'hospital' else ''}">🏥 병원별 리포트</a>
   </div>
