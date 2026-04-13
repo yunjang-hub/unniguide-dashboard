@@ -3,8 +3,9 @@
 *.csv
 *.xls
 
-# 생성된 HTML 리포트
-*.html
+# 생성된 HTML 리포트 (루트 것들만 제외, docs/는 GitHub Pages 배포용이라 포함)
+/*.html
+/hospitals/
 
 # 시스템
 .DS_Store

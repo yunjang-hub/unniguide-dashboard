@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ko"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>제이필의원-강남점 | 언니가이드 리포트 2026년 3월</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --primary: #FF6A3B;
+  --primary-dark: #E8551F;
+  --primary-light: #FFF0EB;
+  --plum: #330C2E;
+  --plum-light: #5C2D54;
+  --ivory: #FBF9F1;
+  --accent: #00B894;
+  --accent-light: #E8FBF5;
+  --bg: #FAFBFC;
+  --card: #FFFFFF;
+  --text: #2D3436;
+  --text-light: #636E72;
+  --border: #E9ECEF;
+  --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  --radius: 16px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans KR',sans-serif;
+  background: var(--bg); color: var(--text); line-height:1.6;
+}
+.container { max-width:1100px; margin:0 auto; padding:24px 20px; }
+
+/* Header */
+.header {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  color: white; padding:40px 0 32px; margin-bottom:32px;
+  border-radius: 0 0 32px 32px;
+}
+.header .container { padding-top:0; padding-bottom:0; }
+.header-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+.logo { font-size:16px; font-weight:800; letter-spacing:1px; opacity:0.95; }
+.logo span { font-weight:400; }
+.report-date { font-size:13px; opacity:0.8; }
+.header h1 { font-size:26px; font-weight:800; margin-bottom:4px; }
+.header .subtitle { font-size:14px; opacity:0.85; }
+
+/* Section */
+.section { margin-bottom:32px; }
+.section-title {
+  font-size:19px; font-weight:700; margin-bottom:16px;
+  display:flex; align-items:center; gap:8px; color:var(--plum);
+}
+.section-title .icon { font-size:22px; }
+
+/* Cards */
+.card {
+  background:var(--card); border-radius:var(--radius);
+  box-shadow:var(--shadow); padding:24px; margin-bottom:16px;
+  border:1px solid var(--border);
+}
+
+.metric-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px; }
+.metric-card {
+  background:var(--card); border-radius:12px; padding:20px;
+  border:1px solid var(--border); text-align:center;
+}
+.metric-card .label { font-size:13px; color:var(--text-light); margin-bottom:4px; }
+.metric-card .value { font-size:26px; font-weight:800; color:var(--plum); }
+.metric-card .sub { font-size:12px; color:var(--text-light); margin-top:4px; }
+
+/* Badges */
+.badge { display:inline-block; padding:2px 10px; border-radius:12px; font-size:12px; font-weight:600; }
+.badge-up { background:#E8FBF5; color:#00B894; }
+.badge-down { background:#FFE8E8; color:#E74C3C; }
+.badge-neutral { background:#F1F2F6; color:#636E72; }
+.badge-primary { background:var(--primary-light); color:var(--primary-dark); }
+
+/* Tables */
+.data-table { width:100%; border-collapse:collapse; font-size:14px; }
+.data-table th {
+  background:var(--ivory); padding:12px 16px; text-align:left;
+  font-weight:600; color:var(--plum); font-size:12px;
+  text-transform:uppercase; letter-spacing:0.5px;
+  border-bottom:2px solid var(--border);
+}
+.data-table td { padding:12px 16px; border-bottom:1px solid var(--border); }
+.data-table tr:hover { background:var(--ivory); }
+.data-table .num { text-align:right; font-variant-numeric:tabular-nums; }
+.data-table .bold { font-weight:700; }
+
+/* Charts */
+.chart-container { position:relative; height:320px; margin:16px 0; }
+.chart-half { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+.chart-half .chart-container { height:280px; }
+
+/* Insight */
+.insight-box {
+  background:linear-gradient(135deg,#FFF9E6 0%,#FFF3CC 100%);
+  border-left:4px solid #F39C12; border-radius:0 12px 12px 0;
+  padding:16px 20px; margin:16px 0; font-size:14px; line-height:1.7;
+}
+.opportunity-box {
+  background:linear-gradient(135deg,var(--accent-light) 0%,#D5F5ED 100%);
+  border-left:4px solid var(--accent); border-radius:0 12px 12px 0;
+  padding:16px 20px; margin:16px 0;
+}
+.opportunity-box h4 { color:#00896A; margin-bottom:8px; }
+.opportunity-box ul { margin-left:20px; }
+.opportunity-box li { margin-bottom:4px; font-size:14px; }
+
+/* Benchmark */
+.benchmark-bar { height:8px; background:#E9ECEF; border-radius:4px; margin:8px 0; overflow:hidden; }
+.benchmark-bar .fill {
+  height:100%; border-radius:4px;
+  background:linear-gradient(90deg,var(--primary) 0%,var(--primary-dark) 100%);
+  transition:width 0.8s ease;
+}
+.benchmark-label { display:flex; justify-content:space-between; font-size:13px; color:var(--text-light); }
+
+/* FAQ */
+.faq-item { margin-bottom:16px; }
+.faq-item h4 { font-size:14px; color:var(--primary-dark); margin-bottom:4px; }
+.faq-item p { font-size:14px; color:var(--text-light); }
+
+/* Nav */
+.back-link {
+  display:inline-flex; align-items:center; gap:6px;
+  color:var(--primary); font-weight:600; text-decoration:none;
+  margin-bottom:16px; font-size:14px;
+}
+.back-link:hover { text-decoration:underline; }
+
+/* Monthly trend table */
+.trend-table th, .trend-table td { text-align:center; padding:10px 12px; }
+.trend-table th { background:var(--ivory); color:var(--plum); }
+.trend-table td.highlight { background:var(--primary-light); font-weight:700; }
+
+/* Footer */
+.footer {
+  text-align:center; padding:32px 0; color:var(--text-light);
+  font-size:13px; border-top:1px solid var(--border); margin-top:40px;
+}
+
+/* Hospital list */
+.hospital-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:12px; }
+.hospital-link {
+  display:block; padding:16px 20px; background:var(--card);
+  border:1px solid var(--border); border-radius:12px;
+  text-decoration:none; color:var(--text); transition:all 0.2s;
+}
+.hospital-link:hover { border-color:var(--primary); box-shadow:0 4px 16px rgba(255,106,59,0.12); transform:translateY(-1px); }
+.hospital-link .h-name { font-weight:700; font-size:15px; margin-bottom:4px; color:var(--plum); }
+.hospital-link .h-stats { font-size:13px; color:var(--text-light); }
+.hospital-link .h-stats strong { color:var(--primary); }
+
+/* Sticky Nav */
+.top-nav { position:sticky; top:0; z-index:100; background:rgba(255,255,255,0.95); backdrop-filter:blur(10px); border-bottom:1px solid var(--border); padding:10px 0; }
+.top-nav-inner { max-width:1100px; margin:0 auto; padding:0 20px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+.top-nav a { text-decoration:none; color:var(--text-light); font-size:13px; font-weight:600; padding:6px 12px; border-radius:8px; transition:all 0.15s; }
+.top-nav a:hover { background:var(--primary-light); color:var(--primary-dark); }
+.top-nav a.active { background:var(--primary); color:white; }
+
+@media (max-width:768px) {
+  .header h1 { font-size:20px; }
+  .metric-grid { grid-template-columns:repeat(2,1fr); }
+  .chart-half { grid-template-columns:1fr; }
+  .hospital-grid { grid-template-columns:1fr; }
+}
+@media print {
+  .back-link { display:none; }
+  .card { break-inside:avoid; }
+}
+</style>
+</head><body>
+
+
+<div class="top-nav">
+  <div class="top-nav-inner">
+    <a href="../index.html" class="">🏠 리더 인덱스</a>
+    <a href="../unniguide_report_202603.html" class="">📈 전체 트렌드</a>
+    <a href="../index.html#hospitals-section" class="active">🏥 병원별 리포트</a>
+  </div>
+</div>
+
+
+<div class="header">
+  <div class="container">
+    <div class="header-top">
+      <div class="logo">UNNI <span>GUIDE</span></div>
+      <div class="report-date">2026년 3월 리포트</div>
+    </div>
+    <h1>제이필의원-강남점</h1>
+    <div class="subtitle">2026년 3월 파트너 병원 성과 리포트</div>
+  </div>
+</div>
+
+
+<div class="container">
+
+<a class="back-link" href="../unniguide_report_202603.html">← 전체 트렌드 리포트로 돌아가기</a>
+
+<!-- 당월 성과 -->
+<div class="section">
+  <div class="section-title"><span class="icon">📊</span> 2026년 3월 성과</div>
+  <div class="metric-grid">
+    <div class="metric-card"><div class="label">시/수술 완료</div><div class="value">8건</div><div class="sub"><span class="badge badge-up">▲ 166.7%</span> 전월 3건</div></div>
+    <div class="metric-card"><div class="label">정산 매출</div><div class="value">778만원</div><div class="sub">수수료 78만원</div></div>
+    <div class="metric-card"><div class="label">인당 객단가</div><div class="value">108만원</div><div class="sub">실 결제 기준</div></div>
+    <div class="metric-card"><div class="label">누적 완료</div><div class="value">21건</div><div class="sub">총 2,287만원</div></div>
+  </div>
+</div>
+
+<!-- 월별 추이 -->
+<div class="section">
+  <div class="section-title"><span class="icon">📈</span> 월별 추이</div>
+  <div class="card">
+    <div class="chart-container" style="height:260px;"><canvas id="monthlyChart"></canvas></div>
+    <table class="data-table trend-table" style="margin-top:16px;">
+      <thead><tr><th>구분</th><th>12월</th><th>01월</th><th>02월</th><th>03월</th><th>04월</th></tr></thead>
+      <tbody>
+        <tr><td class="bold">완료 건수</td><td class="">2건</td><td class="">2건</td><td class="">3건</td><td class="highlight">8건</td><td class="">6건</td></tr>
+        <tr><td style="color:var(--text-light);font-size:12px;">건수 MoM</td><td class="">-</td><td class="" style="color:#636E72;font-weight:600;">→ 0.0%</td><td class="" style="color:#00B894;font-weight:600;">▲ 50.0%</td><td class="highlight" style="color:#00B894;font-weight:600;">▲ 166.7%</td><td class="" style="color:#E74C3C;font-weight:600;">▼ 25.0%</td></tr>
+        <tr><td class="bold">정산 금액</td><td class="">74만원</td><td class="">125만원</td><td class="">50만원</td><td class="highlight">778만원</td><td class="">0원</td></tr>
+        <tr><td style="color:var(--text-light);font-size:12px;">매출 MoM</td><td class="">-</td><td class="" style="color:#00B894;font-weight:600;">▲ 70.1%</td><td class="" style="color:#E74C3C;font-weight:600;">▼ 59.8%</td><td class="highlight" style="color:#00B894;font-weight:600;">▲ 1441.3%</td><td class="" style="color:#E74C3C;font-weight:600;">▼ 100.0%</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+
+<!-- 국적별 -->
+<div class="section">
+  <div class="section-title"><span class="icon">🌏</span> 귀원 고객 국적 분포</div>
+  <div class="card">
+    <div class="chart-half">
+      <div><h3 style="font-size:15px;margin-bottom:8px;">국적 비중</h3><div class="chart-container"><canvas id="natPie"></canvas></div></div>
+      <div><h3 style="font-size:15px;margin-bottom:8px;">국적별 객단가</h3><div class="chart-container"><canvas id="natBar"></canvas></div></div>
+    </div>
+  </div>
+  <div class='card'><h3 style='font-size:15px;margin-bottom:12px;'>국적별 정산 내역 · 인기 시술</h3><table class='data-table'><thead><tr><th>국적</th><th class='num'>건수</th><th class='num'>시수술 금액</th><th class='num'>건당 객단가</th><th>인기 시술 TOP 3</th></tr></thead><tbody><tr><td>🇸🇬 싱가포르</td><td class="num">1건</td><td class="num">365만원</td><td class="num bold">365만원</td><td style="font-size:12px;">온다, 보톡스, 울쎄라</td></tr><tr><td>🇲🇾 말레이시아</td><td class="num">1건</td><td class="num">210만원</td><td class="num bold">210만원</td><td style="font-size:12px;">피코레이저, 셀르디엠, 아쿠아필</td></tr><tr><td>🇨🇦 캐나다</td><td class="num">1건</td><td class="num">99만원</td><td class="num bold">99만원</td><td style="font-size:12px;">보톡스</td></tr><tr><td>🇹🇼 대만</td><td class="num">1건</td><td class="num">55만원</td><td class="num bold">55만원</td><td style="font-size:12px;">엑소좀, 리프팅시술, 리쥬란</td></tr><tr><td>🇨🇳 중국</td><td class="num">1건</td><td class="num">42만원</td><td class="num bold">42만원</td><td style="font-size:12px;">온다, 지방분해주사</td></tr><tr><td>🇲🇳 몽골</td><td class="num">1건</td><td class="num">4만원</td><td class="num bold">4만원</td><td style="font-size:12px;">보톡스</td></tr><tr><td>🇺🇸 미국</td><td class="num">1건</td><td class="num">3만원</td><td class="num bold">3만원</td><td style="font-size:12px;">리쥬란, 피코레이저, 포텐자</td></tr></tbody></table></div>
+  
+<div class="insight-box" style="margin-top:16px;">
+  💡 <strong>응대 언어 인사이트:</strong> 귀원 주요 고객 국적 기준, 원내에 <strong>영어</strong> (미국) · <strong>영어/중국어</strong> (싱가포르) · <strong>영어/말레이어</strong> (말레이시아) 응대 가능 인력이 있다면 상담 전환율과 만족도를 크게 끌어올릴 수 있습니다. 오프라인 센터 데이터상 당일·익일 예약 비중이 높아 실시간 언어 응대가 핵심 성공 요인으로 확인되었습니다.
+</div>
+</div>
+
+<!-- 언니가이드 서비스 전체 국적 트렌드 (귀원 참고용) -->
+<div class="section">
+  <div class="section-title"><span class="icon">🌐</span> 언니가이드 서비스 전체 · 2026년 3월 국적 트렌드</div>
+  <p style="font-size:13px;color:var(--text-light);margin-bottom:12px;">언니가이드 서비스 전체 외국인 고객의 국적별 비중과 객단가 추이입니다. 귀원의 타겟 고객군 발굴에 참고해주세요.</p>
+  <div class="card">
+    <table class="data-table">
+      <thead><tr><th>국적</th><th>비중</th><th class="num">인당 객단가</th><th>선호 시술 TOP 3</th></tr></thead>
+      <tbody><tr><td>🇹🇭 태국</td><td>40.7%</td><td class="num bold">90만원</td><td style="font-size:12px;">보톡스, 포텐자, 울쎄라</td></tr><tr><td>🇹🇼 대만</td><td>21.0%</td><td class="num bold">131만원</td><td style="font-size:12px;">온다, 보톡스, 리프팅시술</td></tr><tr><td>🇺🇸 미국</td><td>18.5%</td><td class="num bold">212만원</td><td style="font-size:12px;">울쎄라, 포텐자, 리쥬란</td></tr><tr><td>🇨🇳 중국</td><td>4.9%</td><td class="num bold">224만원</td><td style="font-size:12px;">포텐자, 울쎄라, 온다</td></tr><tr><td>🇲🇳 몽골</td><td>2.5%</td><td class="num bold">39만원</td><td style="font-size:12px;">보톡스, 트리플레이저, 리쥬란</td></tr><tr><td>🇸🇬 싱가포르</td><td>2.5%</td><td class="num bold">145만원</td><td style="font-size:12px;">피코레이저, 온다, 보톡스</td></tr><tr><td>🇲🇾 말레이시아</td><td>1.2%</td><td class="num bold">475만원</td><td style="font-size:12px;">보톡스, 피코레이저, 셀르디엠</td></tr><tr><td>🇦🇺 호주</td><td>1.2%</td><td class="num bold">383만원</td><td style="font-size:12px;">포텐자, 보톡스, 울쎄라</td></tr><tr><td>🇬🇧 영국</td><td>1.2%</td><td class="num bold">141만원</td><td style="font-size:12px;"><span style="color:#999;">-</span></td></tr><tr><td>🇨🇦 캐나다</td><td>1.2%</td><td class="num bold">283만원</td><td style="font-size:12px;"><span style="color:#999;">-</span></td></tr><tr><td colspan="4" style="text-align:center;color:#999;font-size:12px;">외 8개국</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 시술 -->
+<div class='section'><div class='section-title'><span class='icon'>💉</span> 귀원 인기 시술</div><div class='card'><table class='data-table'><thead><tr><th>시술/수술명</th><th class='num'>건수</th></tr></thead><tbody><tr><td>보톡스</td><td class="num">4건</td></tr><tr><td>리쥬란</td><td class="num">3건</td></tr><tr><td>온다</td><td class="num">2건</td></tr><tr><td>필러</td><td class="num">2건</td></tr><tr><td>피코레이저</td><td class="num">2건</td></tr><tr><td>지방분해주사</td><td class="num">2건</td></tr><tr><td>울쎄라</td><td class="num">1건</td></tr><tr><td>셀르디엠</td><td class="num">1건</td></tr></tbody></table></div></div>
+
+<!-- 성장기회 + 1등 병원 비교 -->
+<div class='section'><div class='section-title'><span class='icon'>🚀</span> 성장 기회</div><div class="opportunity-box"><h4>언니가이드 서비스에서 인기 있지만 귀원에서 아직 예약이 없는 시술</h4><p style="font-size:13px;color:var(--text-light);margin-bottom:8px;">아래 시술로의 고객 유입 확대가 가능합니다.</p><ul><li>물광주사</li><li>쥬베룩</li><li>슈링크</li></ul></div>
+<div class="card" style="background:linear-gradient(135deg,#FFF9E6 0%,#FFFDF5 100%);border:1px solid #F5E6A8;margin-top:12px;">
+  <h3 style="font-size:16px;margin-bottom:8px;color:var(--plum);">🏆 매출 1위 병원 TOP 시술 · 귀원 보유 현황</h3>
+  <p style="font-size:13px;color:var(--text-light);margin-bottom:16px;">이달 매출 1위 병원(익명)의 인기 TOP 5 시술을 기준으로 귀원 등록 여부를 비교합니다. <strong style="color:#E67E22;">2개 시술</strong>에서 유입 확대 여지 — 추가 마케팅 시 매출 상승 기회</p>
+  <table class="data-table" style="background:white;">
+    <thead>
+      <tr>
+        <th style="width:60px;text-align:center;">순위</th>
+        <th>1위 병원 TOP 시술</th>
+        <th style="text-align:right;width:180px;">귀원 보유 현황</th>
+      </tr>
+    </thead>
+    <tbody><tr style=""><td style="text-align:center;font-weight:700;color:var(--primary);">1</td><td style="font-size:14px;font-weight:500;">보톡스</td><td style="text-align:right;"><span style="background:#E8FBF5;color:#00896A;padding:4px 10px;border-radius:12px;font-size:12px;font-weight:600;">✓ 보유 (4건)</span></td></tr><tr style=""><td style="text-align:center;font-weight:700;color:var(--primary);">2</td><td style="font-size:14px;font-weight:500;">리쥬란</td><td style="text-align:right;"><span style="background:#E8FBF5;color:#00896A;padding:4px 10px;border-radius:12px;font-size:12px;font-weight:600;">✓ 보유 (3건)</span></td></tr><tr style=""><td style="text-align:center;font-weight:700;color:var(--primary);">3</td><td style="font-size:14px;font-weight:500;">울쎄라</td><td style="text-align:right;"><span style="background:#E8FBF5;color:#00896A;padding:4px 10px;border-radius:12px;font-size:12px;font-weight:600;">✓ 보유 (1건)</span></td></tr><tr style="background:#FFF8F5;"><td style="text-align:center;font-weight:700;color:var(--primary);">4</td><td style="font-size:14px;font-weight:500;">포텐자</td><td style="text-align:right;"><span style="background:#FFF3E0;color:#E67E22;padding:4px 10px;border-radius:12px;font-size:12px;font-weight:700;">📈 유입 확대 여지</span></td></tr><tr style="background:#FFF8F5;"><td style="text-align:center;font-weight:700;color:var(--primary);">5</td><td style="font-size:14px;font-weight:500;">쥬베룩</td><td style="text-align:right;"><span style="background:#FFF3E0;color:#E67E22;padding:4px 10px;border-radius:12px;font-size:12px;font-weight:700;">📈 유입 확대 여지</span></td></tr></tbody>
+  </table>
+</div></div>
+
+<!-- FAQ: 예약 성공 공식 -->
+<div class="section">
+  <div class="section-title"><span class="icon">💡</span> 예약을 더 많이 받는 5가지 성공 공식</div>
+  <p style="font-size:13px;color:var(--text-light);margin-bottom:14px;">언니가이드에서 예약이 활발한 병원들의 공통점을 정리했습니다.</p>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;">
+    <div style="padding:18px;background:linear-gradient(135deg,#FFF0EB 0%,#FFF8F5 100%);border-left:4px solid var(--primary);border-radius:10px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <span style="background:var(--primary);color:white;font-weight:800;font-size:14px;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;">1</span>
+        <strong style="color:var(--plum);font-size:14px;">장비 리스트 공유</strong>
+      </div>
+      <div style="font-size:13px;color:var(--text);line-height:1.5;">병원에서 보유한 <strong>전체 장비 리스트</strong>를 투명하게 전달</div>
+    </div>
+    <div style="padding:18px;background:linear-gradient(135deg,#FFF0EB 0%,#FFF8F5 100%);border-left:4px solid var(--primary);border-radius:10px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <span style="background:var(--primary);color:white;font-weight:800;font-size:14px;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;">2</span>
+        <strong style="color:var(--plum);font-size:14px;">수가 투명 공개</strong>
+      </div>
+      <div style="font-size:13px;color:var(--text);line-height:1.5;">병원 보유 <strong>전체 수가</strong>를 공유하여 상담사가 빠르게 고객 안내 가능</div>
+    </div>
+    <div style="padding:18px;background:linear-gradient(135deg,#FFF0EB 0%,#FFF8F5 100%);border-left:4px solid var(--primary);border-radius:10px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <span style="background:var(--primary);color:white;font-weight:800;font-size:14px;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;">3</span>
+        <strong style="color:var(--plum);font-size:14px;">원내 언어 응대자</strong>
+      </div>
+      <div style="font-size:13px;color:var(--text);line-height:1.5;">오프라인 센터는 당일·익일 예약이 많아 <strong>원내 언어 응대자 보유</strong>가 큰 메리트</div>
+    </div>
+    <div style="padding:18px;background:linear-gradient(135deg,#FFF0EB 0%,#FFF8F5 100%);border-left:4px solid var(--primary);border-radius:10px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <span style="background:var(--primary);color:white;font-weight:800;font-size:14px;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;">4</span>
+        <strong style="color:var(--plum);font-size:14px;">1시간 이내 답변</strong>
+      </div>
+      <div style="font-size:13px;color:var(--text);line-height:1.5;">고객 예약·수가 확인 요청 인입 시 <strong>1시간 이내 답변</strong></div>
+    </div>
+    <div style="padding:18px;background:linear-gradient(135deg,#FFF0EB 0%,#FFF8F5 100%);border-left:4px solid var(--primary);border-radius:10px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <span style="background:var(--primary);color:white;font-weight:800;font-size:14px;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;">5</span>
+        <strong style="color:var(--plum);font-size:14px;">컨설턴트와 적극 소통</strong>
+      </div>
+      <div style="font-size:13px;color:var(--text);line-height:1.5;">언니가이드 컨설턴트와의 <strong>적극적 소통·상호 피드백</strong> 교환</div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<div class="footer">
+  <div class="container">
+    <p><strong>UNNI GUIDE</strong> | 강남언니 언니가이드 서비스</p>
+    <p style="margin-top:4px;">본 리포트는 파트너 병원 전용 자료입니다. 무단 배포를 삼가해 주세요.</p>
+    <p style="margin-top:4px;opacity:0.7;">생성일: 2026년 04월 13일</p>
+  </div>
+</div>
+
+
+<script>
+const D = {"nat_labels": ["미국", "싱가포르", "말레이시아", "중국", "대만", "캐나다", "몽골"], "nat_counts": [2, 1, 1, 1, 1, 1, 1], "nat_prices": [427500, 3647600, 2100000, 421000, 550000, 987800, 39600], "monthly_labels": ["12월", "01월", "02월", "03월", "04월"], "monthly_completed": [2, 2, 3, 8, 6], "monthly_revenue": [737000.0, 1254000.0, 504500.0, 7776000.0, 0], "monthly_mom": [null, 70.1, -59.8, 1441.3, -100.0]};
+const C = ['#FF6A3B','#330C2E','#00B894','#FDCB6E','#0984E3','#E17055','#00CEC9','#A29BFE','#FD79A8','#55A3E8','#F39C12','#2ECC71','#E74C3C','#9B59B6','#1ABC9C'];
+
+// 월별 추이 차트 (정산 매출 바 + 매출 MoM 선)
+new Chart(document.getElementById('monthlyChart'),{
+  type:'bar',
+  data:{
+    labels:D.monthly_labels,
+    datasets:[
+      {label:'정산 매출',data:D.monthly_revenue,backgroundColor:'#FF6A3B88',borderColor:'#FF6A3B',borderWidth:1,borderRadius:6,yAxisID:'y',order:2},
+      {label:'매출 MoM(%)',data:D.monthly_mom,type:'line',borderColor:'#00B894',backgroundColor:'#00B89422',pointRadius:5,pointBackgroundColor:'#00B894',tension:0.3,yAxisID:'y2',borderWidth:2.5,order:1,spanGaps:true}
+    ]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{
+      legend:{position:'top'},
+      tooltip:{callbacks:{label:function(ctx){const v=ctx.parsed.y;if(ctx.dataset.label==='정산 매출'){return '정산 매출: '+(v/10000).toLocaleString()+'만원';}if(ctx.dataset.label.includes('MoM')){return 'MoM: '+(v>0?'+':'')+v+'%';}return ctx.dataset.label+': '+v;}}}
+    },
+    scales:{
+      y:{position:'left',title:{display:true,text:'정산 매출 (원)'},grid:{color:'#F1F2F6'},ticks:{callback:v=>(v/10000).toFixed(0)+'만'}},
+      y2:{position:'right',title:{display:true,text:'MoM (%)'},grid:{display:false},ticks:{callback:v=>v+'%'}}
+    }
+  }
+});
+
+// 국적 차트
+if(D.nat_labels.length>0){
+  new Chart(document.getElementById('natPie'),{type:'doughnut',data:{labels:D.nat_labels,datasets:[{data:D.nat_counts,backgroundColor:C,borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:12}}}}}});
+  new Chart(document.getElementById('natBar'),{type:'bar',data:{labels:D.nat_labels,datasets:[{data:D.nat_prices,backgroundColor:C.map(c=>c+'88'),borderColor:C,borderWidth:1,borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{callback:v=>(v/10000).toFixed(0)+'만'}},y:{grid:{display:false}}}}});
+}
+</script>
+</body></html>

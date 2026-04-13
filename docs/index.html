@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ko"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>언니가이드 병원 리포트 인덱스 | 2026년 3월</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR',sans-serif; color:#2D3436; line-height:1.5; background:#FAFBFC; }
+.container { max-width:1200px; margin:0 auto; padding:24px 20px; }
+
+/* Sticky Nav */
+.top-nav { position:sticky; top:0; z-index:100; background:rgba(255,255,255,0.95); backdrop-filter:blur(10px); border-bottom:1px solid #E9ECEF; padding:10px 0; }
+.top-nav-inner { max-width:1200px; margin:0 auto; padding:0 20px; display:flex; gap:16px; align-items:center; }
+.top-nav a { text-decoration:none; color:#636E72; font-size:13px; font-weight:600; padding:6px 12px; border-radius:8px; transition:all 0.15s; }
+.top-nav a:hover { background:#FFF0EB; color:#FF6A3B; }
+.top-nav a.active { background:#FF6A3B; color:white; }
+.top-nav .spacer { flex:1; }
+.top-nav .search { padding:6px 12px; border:1px solid #E9ECEF; border-radius:8px; font-size:13px; width:200px; outline:none; transition:border 0.15s; }
+.top-nav .search:focus { border-color:#FF6A3B; }
+
+.header { background:linear-gradient(135deg,#FF6A3B 0%,#E8551F 100%); color:white; padding:40px 0 32px; margin-bottom:32px; border-radius:0 0 32px 32px; }
+.header-inner { max-width:1200px; margin:0 auto; padding:0 20px; }
+.header .logo { font-size:16px; font-weight:800; letter-spacing:1px; opacity:0.95; margin-bottom:8px; }
+.header h1 { font-size:28px; font-weight:800; margin-bottom:6px; }
+.header .sub { font-size:14px; opacity:0.9; }
+
+.summary-strip { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:32px; }
+.stat-card { background:white; border:1px solid #E9ECEF; border-radius:12px; padding:16px 20px; box-shadow:0 2px 8px rgba(0,0,0,0.04); }
+.stat-card .label { font-size:12px; color:#636E72; margin-bottom:4px; }
+.stat-card .value { font-size:22px; font-weight:800; color:#330C2E; }
+.stat-card .sub { font-size:11px; color:#FF6A3B; font-weight:600; margin-top:2px; }
+
+.section { margin-bottom:40px; }
+.section-header { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:16px; padding-bottom:12px; border-bottom:2px solid #FF6A3B33; }
+.section-title { font-size:20px; font-weight:800; color:#330C2E; display:flex; align-items:center; gap:10px; }
+.section-title .badge { background:#FFF0EB; color:#FF6A3B; font-size:13px; font-weight:700; padding:4px 12px; border-radius:16px; }
+.section-desc { font-size:13px; color:#636E72; }
+
+.grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:14px; }
+
+.hospital-card {
+  display:block; padding:18px; background:white; border:1px solid #E9ECEF;
+  border-radius:14px; text-decoration:none; color:inherit;
+  transition:all 0.2s; box-shadow:0 2px 8px rgba(0,0,0,0.04);
+}
+.hospital-card:hover { border-color:#FF6A3B; box-shadow:0 6px 20px rgba(255,106,59,0.15); transform:translateY(-2px); }
+.hospital-card.top { border-left:4px solid #FF6A3B; background:linear-gradient(135deg,#FFFFFF 0%,#FFF8F5 100%); }
+
+.card-top { display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
+.rank-badge { display:inline-block; background:#F1F2F6; color:#636E72; font-size:11px; font-weight:700; padding:3px 10px; border-radius:10px; width:fit-content; }
+.rank-badge.top { background:#FFF0EB; color:#FF6A3B; }
+.h-name { font-size:16px; font-weight:700; color:#330C2E; }
+
+.card-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; padding:10px 0; border-top:1px solid #F1F2F6; border-bottom:1px solid #F1F2F6; }
+.card-stats .stat { text-align:center; }
+.card-stats .label { display:block; font-size:10px; color:#636E72; margin-bottom:2px; }
+.card-stats .value { display:block; font-size:13px; font-weight:700; color:#330C2E; }
+
+.card-foot { font-size:12px; color:#FF6A3B; font-weight:600; margin-top:10px; text-align:right; }
+
+.common-card {
+  display:block; padding:24px; background:linear-gradient(135deg,#330C2E 0%,#5C2D54 100%); color:white;
+  border-radius:14px; text-decoration:none; margin-bottom:32px; box-shadow:0 4px 16px rgba(51,12,46,0.2);
+  transition:all 0.2s;
+}
+.common-card:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(51,12,46,0.3); }
+.common-card h2 { font-size:22px; font-weight:800; margin-bottom:6px; }
+.common-card p { font-size:14px; opacity:0.85; }
+.common-card .arrow { float:right; font-size:24px; opacity:0.6; }
+
+.footer { text-align:center; padding:40px 0 20px; color:#636E72; font-size:12px; border-top:1px solid #E9ECEF; margin-top:40px; }
+.hidden { display:none !important; }
+
+@media (max-width:768px) {
+  .summary-strip { grid-template-columns:repeat(2,1fr); }
+  .grid { grid-template-columns:1fr; }
+}
+</style>
+</head><body>
+
+<!-- Sticky Nav -->
+<div class="top-nav">
+  <div class="top-nav-inner">
+    <a href="index.html" class="active">🏠 리더 인덱스</a>
+    <a href="unniguide_report_202603.html">📈 전체 트렌드</a>
+    <a href="#hospitals-section">🏥 병원별 리포트</a>
+    <div class="spacer"></div>
+    <input type="text" class="search" id="hospSearch" placeholder="병원명 검색..." onkeyup="filterHospitals(this.value)" />
+  </div>
+</div>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="logo">UNNI GUIDE · LEADER VIEW</div>
+    <h1>📊 병원 리포트 인덱스</h1>
+    <div class="sub">2026년 3월 · 파트너 병원 18개 성과 한눈에 보기</div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- 요약 -->
+  <div class="summary-strip">
+    <div class="stat-card"><div class="label">총 파트너 병원</div><div class="value">18개</div><div class="sub">정산 기준</div></div>
+    <div class="stat-card"><div class="label">총 정산 매출</div><div class="value">2.3억</div><div class="sub">2026년 3월</div></div>
+    <div class="stat-card"><div class="label">상위 20% 병원</div><div class="value">4개</div><div class="sub">TOP tier</div></div>
+    <div class="stat-card"><div class="label">상위 20% 매출 비중</div><div class="value">51.5%</div><div class="sub">전체 매출 중</div></div>
+  </div>
+
+  <!-- 공통 리포트 -->
+  <a class="common-card" href="unniguide_report_202603.html" target="_blank">
+    <div class="arrow">→</div>
+    <h2>📈 언니가이드 서비스 전체 트렌드 리포트</h2>
+    <p>2026년 3월 전체 플랫폼 시장 인사이트 · 국적별 트렌드 · 인기 시술 · 병원 전체 현황</p>
+  </a>
+
+  <!-- 상위 20% -->
+  <div class="section" id="hospitals-section">
+    <div class="section-header">
+      <div class="section-title">
+        🏆 상위 20% 병원 <span class="badge">TOP 4</span>
+      </div>
+      <div class="section-desc">"언니가이드 서비스 내 순위" 섹션 노출 · 긍정 시그널 중심</div>
+    </div>
+    <div class="grid">
+    <a class="hospital-card top" href="hospitals/사적인아름다움지유의원_202603.html" target="_blank">
+      <div class="card-top">
+        <span class="rank-badge top">🏆 1위</span>
+        <div class="h-name">사적인아름다움지유의원</div>
+      </div>
+      <div class="card-stats">
+        <div class="stat"><span class="label">매출</span><span class="value">4,628만원</span></div>
+        <div class="stat"><span class="label">건수</span><span class="value">22건</span></div>
+        <div class="stat"><span class="label">수수료</span><span class="value">463만원</span></div>
+      </div>
+      <div class="card-foot">리포트 보기 →</div>
+    </a>
+    <a class="hospital-card top" href="hospitals/테이아의원_202603.html" target="_blank">
+      <div class="card-top">
+        <span class="rank-badge top">🏆 2위</span>
+        <div class="h-name">테이아의원</div>
+      </div>
+      <div class="card-stats">
+        <div class="stat"><span class="label">매출</span><span class="value">2,761만원</span></div>
+        <div class="stat"><span class="label">건수</span><span class="value">11건</span></div>
+        <div class="stat"><span class="label">수수료</span><span class="value">276만원</span></div>
+      </div>
+      <div class="card-foot">리포트 보기 →</div>
+    </a>
+    <a class="hospital-card top" href="hospitals/톡스앤필의원-신논현점_202603.html" target="_blank">
+      <div class="card-top">
+        <span class="rank-badge top">🏆 3위</span>
+        <div class="h-name">톡스앤필의원-신논현점</div>
+      </div>
+      <div class="card-stats">
+        <div class="stat"><span class="label">매출</span><span class="value">2,309만원</span></div>
+        <div class="stat"><span class="label">건수</span><span class="value">18건</span></div>
+        <div class="stat"><span class="label">수수료</span><span class="value">231만원</span></div>
+      </div>
+      <div class="card-foot">리포트 보기 →</div>
+    </a>
+    <a class="hospital-card top" href="hospitals/유픽의원-홍대점_202603.html" target="_blank">
+      <div class="card-top">
+        <span class="rank-badge top">🏆 4위</span>
+        <div class="h-name">유픽의원-홍대점</div>
+      </div>
+      <div class="card-stats">
+        <div class="stat"><span class="label">매출</span><span class="value">2,268만원</span></div>
+        <div class="stat"><span class="label">건수</span><span class="value">29건</span></div>
+        <div class="stat"><span class="label">수수료</span><span class="value">227만원</span></div>
+      </div>
+      <div class="card-foot">리포트 보기 →</div>
+    </a></div>
+  </div>
+
+  <!-- 그 외 -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">
+        🏥 그 외 병원 <span class="badge">14개</span>
+      </div>
+      <div class="section-desc">성장 기회 · 1위 병원 비교 중심 · 액션 인사이트 강조</div>
+    </div>
+    <div class="grid">
+    <a class="hospital-card " href="hospitals/유픽의원-강남점_202603.html" target="_blank">
+      <div class="card-top">
+        <span class="rank-badge">5위</span>
+        <div class="h-name">유픽의원-강남점</div>
+      </div>
+      <div class="card-stats">
+        <div class="stat"><span class="label">매출</span><span class="value">1,969만원</span></div>
+        <div class="stat"><span class="label">건수</span><span class="value">22건</span></div>
+        <div class="stat"><span class="label">수수료</span><span class="value">197만원</span></div>
+      </div>
+      <div class="card-foot">리포트 보기 →</div>
+    </a>
+    <a class="hospital-card " href="hospitals/제이필의원-홍대점_202603.html" target="_blank">
+      <div class="card-top">
+        <span class="rank-badge">6위</span>
+        <div class="h-name">제이필의원-홍대점</div>
+      </div>
+      <div class="card-stats">
+        <div class="stat"><span class="label">매출</span><span class="value">1,548만원</span></div>
+        <div class="stat"><span class="label">건수</span><span class="value">17건</span></div>
+        <div class="stat"><span class="label">수수료</span><span class="value">155만원</span></div>
+      </div>
+      <div class="card-foot">리포트 보기 →</div>
+    </a>
+    <a class="hospital-card " href="hospitals/청담디어의원_202603.html" target="_blank">
+      <div class="card-top">
+        <span class="rank-badge">7위</span>
+        <div class="h-name">청담디어의원</div>
+      </div>
+      <div class="card-stats">
+        <div class="stat"><span class="label">매출</span><span class="value">1,237만원</span></div>
+        <div class="stat"><span class="label">건수</span><span class="value">8건</span></div>
+        <div class="stat"><span class="label">수수료</span><span class="value">124만원</span></div>
+      </div>
+      <div class="card-foot">리포트 보기 →</div>
+    </a>
+    <a class="hospital-card " href="hospitals/우리성형외과의원_202603.html" target="_blank">
+      <div class="card-top">
+        <span class="rank-badge">8위</span>
+        <div class="h-name">우리성형외과의원</div>
+      </div>
+      <div class="card-stats">
+        <div class="stat"><span class="label">매출</span><span class="value">1,090만원</span></div>
+        <div class="stat"><span class="label">건수</span><span class="value">1건</span></div>
+        <div class="stat"><span class="label">수수료</span><span class="value">218만원</span></div>
+      </div>
+      <div class="card-foot">리포트 보기 →</div>
+    </a>
+    <a class="hospital-card " href="hospitals/플로리아의원_202603.html" target="_blank">
+      <div class="card-top">
+        <span class="rank-badge">9위</span>
+        <div class="h-name">플로리아의원</div>
+      </div>
+      <div class="card-stats">
+        <div class="stat"><span class="label">매출</span><span class="value">1,031만원</span></div>
+        <div class="stat"><span class="label">건수</span><span class="value">10건</span></div>
+        <div class="stat"><span class="label">수수료</span><span class="value">103만원</span></div>
+      </div>
+      <div class="card-foot">리포트 보기 →</div>
+    </a>
+    <a class="hospital-card " href="hospitals/오앤의원_202603.html" target="_blank">
+      <div class="card-top">
+        <span class="rank-badge">10위</span>
+        <div class="h-name">오앤의원</div>
+      </div>
+      <div class="card-stats">
+        <div class="stat"><span class="label">매출</span><span class="value">838만원</span></div>
+        <div class="stat"><span class="label">건수</span><span class="value">4건</span></div>
+        <div class="stat"><span class="label">수수료</span><span class="value">84만원</span></div>
+      </div>
+      <div class="card-foot">리포트 보기 →</div>
+    </a>
+    <a class="hospital-card " href="hospitals/제이필의원-강남점_202603.html" target="_blank">
+      <div class="card-top">
+        <span class="rank-badge">11위</span>
+        <div class="h-name">제이필의원-강남점</div>
+      </div>
+      <div class="card-stats">
+        <div class="stat"><span class="label">매출</span><span class="value">778만원</span></div>
+        <div class="stat"><span class="label">건수</span><span class="value">7건</span></div>
+        <div class="stat"><span class="label">수수료</span><span class="value">78만원</span></div>
+      </div>
+      <div class="card-foot">리포트 보기 →</div>
+    </a>
+    <a class="hospital-card " href="hospitals/우유빛의원_202603.html" target="_blank">
+      <div class="card-top">
+        <span class="rank-badge">12위</span>
+        <div class="h-name">우유빛의원</div>
+      </div>
+      <div class="card-stats">
+        <div class="stat"><span class="label">매출</span><span class="value">683만원</span></div>
+        <div class="stat"><span class="label">건수</span><span class="value">4건</span></div>
+        <div class="stat"><span class="label">수수료</span><span class="value">68만원</span></div>
+      </div>
+      <div class="card-foot">리포트 보기 →</div>
+    </a>
+    <a class="hospital-card " href="hospitals/홍대셀레나의원_202603.html" target="_blank">
+      <div class="card-top">
+        <span class="rank-badge">13위</span>
+        <div class="h-name">홍대셀레나의원</div>
+      </div>
+      <div class="card-stats">
+        <div class="stat"><span class="label">매출</span><span class="value">564만원</span></div>
+        <div class="stat"><span class="label">건수</span><span class="value">1건</span></div>
+        <div class="stat"><span class="label">수수료</span><span class="value">56만원</span></div>
+      </div>
+      <div class="card-foot">리포트 보기 →</div>
+    </a>
+    <a class="hospital-card " href="hospitals/히트성형외과의원_202603.html" target="_blank">
+      <div class="card-top">
+        <span class="rank-badge">14위</span>
+        <div class="h-name">히트성형외과의원</div>
+      </div>
+      <div class="card-stats">
+        <div class="stat"><span class="label">매출</span><span class="value">560만원</span></div>
+        <div class="stat"><span class="label">건수</span><span class="value">2건</span></div>
+        <div class="stat"><span class="label">수수료</span><span class="value">112만원</span></div>
+      </div>
+      <div class="card-foot">리포트 보기 →</div>
+    </a>
+    <a class="hospital-card " href="hospitals/플레저성형외과의원_202603.html" target="_blank">
+      <div class="card-top">
+        <span class="rank-badge">15위</span>
+        <div class="h-name">플레저성형외과의원</div>
+      </div>
+      <div class="card-stats">
+        <div class="stat"><span class="label">매출</span><span class="value">362만원</span></div>
+        <div class="stat"><span class="label">건수</span><span class="value">1건</span></div>
+        <div class="stat"><span class="label">수수료</span><span class="value">72만원</span></div>
+      </div>
+      <div class="card-foot">리포트 보기 →</div>
+    </a>
+    <a class="hospital-card " href="hospitals/플라덴성형외과의원_202603.html" target="_blank">
+      <div class="card-top">
+        <span class="rank-badge">16위</span>
+        <div class="h-name">플라덴성형외과의원</div>
+      </div>
+      <div class="card-stats">
+        <div class="stat"><span class="label">매출</span><span class="value">329만원</span></div>
+        <div class="stat"><span class="label">건수</span><span class="value">3건</span></div>
+        <div class="stat"><span class="label">수수료</span><span class="value">33만원</span></div>
+      </div>
+      <div class="card-foot">리포트 보기 →</div>
+    </a>
+    <a class="hospital-card " href="hospitals/모즈의원_202603.html" target="_blank">
+      <div class="card-top">
+        <span class="rank-badge">17위</span>
+        <div class="h-name">모즈의원</div>
+      </div>
+      <div class="card-stats">
+        <div class="stat"><span class="label">매출</span><span class="value">211만원</span></div>
+        <div class="stat"><span class="label">건수</span><span class="value">2건</span></div>
+        <div class="stat"><span class="label">수수료</span><span class="value">21만원</span></div>
+      </div>
+      <div class="card-foot">리포트 보기 →</div>
+    </a>
+    <a class="hospital-card " href="hospitals/티에스성형외과의원_202603.html" target="_blank">
+      <div class="card-top">
+        <span class="rank-badge">18위</span>
+        <div class="h-name">티에스성형외과의원</div>
+      </div>
+      <div class="card-stats">
+        <div class="stat"><span class="label">매출</span><span class="value">90만원</span></div>
+        <div class="stat"><span class="label">건수</span><span class="value">1건</span></div>
+        <div class="stat"><span class="label">수수료</span><span class="value">18만원</span></div>
+      </div>
+      <div class="card-foot">리포트 보기 →</div>
+    </a></div>
+  </div>
+
+</div>
+
+<script>
+function filterHospitals(query) {
+  const q = query.toLowerCase().trim();
+  document.querySelectorAll('.hospital-card').forEach(card => {
+    const name = card.querySelector('.h-name').textContent.toLowerCase();
+    card.classList.toggle('hidden', q && !name.includes(q));
+  });
+}
+</script>
+
+<div class="footer">
+  <strong>UNNI GUIDE</strong> · 리더 비교 대시보드 | 생성일: 2026.04.13
+  <br>본 페이지는 내부 리더 전용 자료입니다.
+</div>
+
+</body></html>
