@@ -160,9 +160,16 @@ def format_krw(amount):
 # ============================================================
 # 데이터 로딩
 # ============================================================
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, ttl=600)
 def load_operation_excel(file_path):
     """운영 트렌드 Excel → 예약완료 df + 정산 df + 전체예약 df"""
+
+    # URL인 경우 다운로드
+    if str(file_path).startswith('http'):
+        import urllib.request
+        tmp = '/tmp/unniguide_gsheet_op.xlsx'
+        urllib.request.urlretrieve(file_path, tmp)
+        file_path = tmp
 
     # 예약 시트
     df_res = pd.read_excel(file_path, sheet_name='언니가이드 예약확정 시트 데일리', header=1)
@@ -228,9 +235,15 @@ def load_operation_excel(file_path):
     return df_completed, df_settle, df_all
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, ttl=600)
 def load_internal_report(file_path):
     """내부리포트 Excel → 월별트렌드 df, 병원별성과 df, 취소노쇼 요약 df, 취소노쇼 상세 df"""
+
+    if str(file_path).startswith('http'):
+        import urllib.request
+        tmp = '/tmp/unniguide_gsheet_ir.xlsx'
+        urllib.request.urlretrieve(file_path, tmp)
+        file_path = tmp
 
     # 월별 트렌드
     df_monthly = pd.read_excel(file_path, sheet_name='월별 트렌드', header=None, skiprows=3)
@@ -309,6 +322,25 @@ def load_internal_report(file_path):
 
 
 # ============================================================
+# Google Sheets 설정
+# ============================================================
+GSHEET_ID_MAIN = "1pNQiaK67nz6FhxssxgWvoiQr6YwT-5MCwDVvqUZW1SY"
+GSHEET_ID_REPORT = "16xOwlg8nptwbdM3uvbhr012v77xECiUIgy6wKjT5QYI"
+GID_RESERVATION = 123775075   # 예약확정 시트
+GID_SETTLEMENT = 622724794    # 내부리포트 (정산 포함)
+GID_OFFLINE = 1126075757      # 오프라인 데일리
+GID_DASHBOARD = 1029704191    # 가공 대시보드
+
+
+def gsheet_xlsx_url(sheet_id):
+    return f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=xlsx"
+
+
+def gsheet_csv_url(sheet_id, gid):
+    return f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
+
+
+# ============================================================
 # 사이드바
 # ============================================================
 with st.sidebar:
@@ -321,46 +353,69 @@ with st.sidebar:
     """, unsafe_allow_html=True)
     st.divider()
 
-    # 운영 트렌드 Excel
-    st.markdown("**1. 운영 트렌드 데이터**")
-    pattern1 = os.path.expanduser('~/Downloads/언니가이드 운영 트렌드 데이터_*.xlsx')
-    pattern1b = os.path.expanduser('~/Desktop/언니가이드_리포트/언니가이드 운영 트렌드 데이터_*.xlsx')
-    op_candidates = sorted(glob.glob(pattern1) + glob.glob(pattern1b), key=os.path.getmtime, reverse=True)
+    data_source = st.radio("데이터 소스", ["Google Sheets (자동)", "로컬 파일"], index=0)
 
     df_completed = df_settle = df_all = None
-    if op_candidates:
-        op_file = st.selectbox("운영 Excel", op_candidates, format_func=os.path.basename, key="op")
-        with st.spinner("운영 데이터 로딩..."):
-            df_completed, df_settle, df_all = load_operation_excel(op_file)
-    else:
-        op_upload = st.file_uploader("운영 Excel 업로드", type=['xlsx'], key="op_up")
-        if op_upload:
-            # Save temp
-            tmp = "/tmp/unniguide_op.xlsx"
-            with open(tmp, "wb") as f:
-                f.write(op_upload.getvalue())
-            with st.spinner("운영 데이터 로딩..."):
-                df_completed, df_settle, df_all = load_operation_excel(tmp)
-
-    # 내부리포트 Excel
-    st.markdown("**2. 내부 리포트**")
-    pattern2 = os.path.expanduser('~/Downloads/언니가이드_내부리포트_*.xlsx')
-    pattern2b = os.path.expanduser('~/Desktop/언니가이드_리포트/언니가이드_내부리포트_*.xlsx')
-    ir_candidates = sorted(glob.glob(pattern2) + glob.glob(pattern2b), key=os.path.getmtime, reverse=True)
-
     df_monthly = df_hosp_perf = cancel_summary = df_cancel_hospital = df_cancel_detail = None
-    if ir_candidates:
-        ir_file = st.selectbox("내부리포트 Excel", ir_candidates, format_func=os.path.basename, key="ir")
-        with st.spinner("내부리포트 로딩..."):
-            df_monthly, df_hosp_perf, cancel_summary, df_cancel_hospital, df_cancel_detail = load_internal_report(ir_file)
+
+    if data_source == "Google Sheets (자동)":
+        st.caption("Google Sheets에서 자동으로 데이터를 불러옵니다.")
+        if st.button("데이터 새로고침", type="primary"):
+            st.cache_data.clear()
+
+        try:
+            with st.spinner("운영 데이터 로딩 중..."):
+                xlsx_url = gsheet_xlsx_url(GSHEET_ID_MAIN)
+                df_completed, df_settle, df_all = load_operation_excel(xlsx_url)
+            st.success("운영 데이터 로드 완료")
+        except Exception as e:
+            st.error(f"운영 데이터 로드 실패: {str(e)[:50]}")
+
+        try:
+            with st.spinner("내부리포트 로딩 중..."):
+                xlsx_url2 = gsheet_xlsx_url(GSHEET_ID_REPORT)
+                df_monthly, df_hosp_perf, cancel_summary, df_cancel_hospital, df_cancel_detail = load_internal_report(xlsx_url2)
+            st.success("내부리포트 로드 완료")
+        except Exception as e:
+            st.warning(f"내부리포트 로드 실패: {str(e)[:50]}")
+
     else:
-        ir_upload = st.file_uploader("내부리포트 Excel 업로드", type=['xlsx'], key="ir_up")
-        if ir_upload:
-            tmp2 = "/tmp/unniguide_ir.xlsx"
-            with open(tmp2, "wb") as f:
-                f.write(ir_upload.getvalue())
+        # 로컬 파일 모드 (기존 방식)
+        st.markdown("**1. 운영 트렌드 데이터**")
+        pattern1 = os.path.expanduser('~/Downloads/언니가이드 운영 트렌드 데이터_*.xlsx')
+        pattern1b = os.path.expanduser('~/Desktop/언니가이드_리포트/언니가이드 운영 트렌드 데이터_*.xlsx')
+        op_candidates = sorted(glob.glob(pattern1) + glob.glob(pattern1b), key=os.path.getmtime, reverse=True)
+
+        if op_candidates:
+            op_file = st.selectbox("운영 Excel", op_candidates, format_func=os.path.basename, key="op")
+            with st.spinner("운영 데이터 로딩..."):
+                df_completed, df_settle, df_all = load_operation_excel(op_file)
+        else:
+            op_upload = st.file_uploader("운영 Excel 업로드", type=['xlsx'], key="op_up")
+            if op_upload:
+                tmp = "/tmp/unniguide_op.xlsx"
+                with open(tmp, "wb") as f:
+                    f.write(op_upload.getvalue())
+                with st.spinner("운영 데이터 로딩..."):
+                    df_completed, df_settle, df_all = load_operation_excel(tmp)
+
+        st.markdown("**2. 내부 리포트**")
+        pattern2 = os.path.expanduser('~/Downloads/언니가이드_내부리포트_*.xlsx')
+        pattern2b = os.path.expanduser('~/Desktop/언니가이드_리포트/언니가이드_내부리포트_*.xlsx')
+        ir_candidates = sorted(glob.glob(pattern2) + glob.glob(pattern2b), key=os.path.getmtime, reverse=True)
+
+        if ir_candidates:
+            ir_file = st.selectbox("내부리포트 Excel", ir_candidates, format_func=os.path.basename, key="ir")
             with st.spinner("내부리포트 로딩..."):
-                df_monthly, df_hosp_perf, cancel_summary, df_cancel_hospital, df_cancel_detail = load_internal_report(tmp2)
+                df_monthly, df_hosp_perf, cancel_summary, df_cancel_hospital, df_cancel_detail = load_internal_report(ir_file)
+        else:
+            ir_upload = st.file_uploader("내부리포트 Excel 업로드", type=['xlsx'], key="ir_up")
+            if ir_upload:
+                tmp2 = "/tmp/unniguide_ir.xlsx"
+                with open(tmp2, "wb") as f:
+                    f.write(ir_upload.getvalue())
+                with st.spinner("내부리포트 로딩..."):
+                    df_monthly, df_hosp_perf, cancel_summary, df_cancel_hospital, df_cancel_detail = load_internal_report(tmp2)
 
 # ============================================================
 # 데이터 없으면 안내
