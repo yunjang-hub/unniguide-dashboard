@@ -527,145 +527,164 @@ prev_candidates = [m for m in all_months if m < latest_month] if latest_month el
 prev_month = prev_candidates[-1] if prev_candidates else None
 
 # ============================================================
-# Tab 1: Overview
+# Tab 1: Overview (A+C: 전체 고정 + 필터 반응)
 # ============================================================
 with tab1:
-    latest_res = filtered_res[filtered_res['월'] == latest_month] if latest_month else filtered_res
-    prev_res = df_completed[df_completed['월'] == prev_month] if prev_month else pd.DataFrame()
-    latest_set = filtered_set[filtered_set['정산월'] == latest_month] if latest_month and len(filtered_set) > 0 else filtered_set
-    prev_set = df_settle[df_settle['정산월'] == prev_month] if prev_month and len(df_settle) > 0 else pd.DataFrame()
-
-    if selected_nationalities:
-        prev_res = prev_res[prev_res['고객국적'].isin(selected_nationalities)]
-        if len(prev_set) > 0:
-            prev_set = prev_set[prev_set['국적'].isin(selected_nationalities)]
-    if selected_hospitals:
-        prev_res = prev_res[prev_res['병원명'].isin(selected_hospitals)]
-        if len(prev_set) > 0:
-            prev_set = prev_set[prev_set['병원명'].isin(selected_hospitals)]
-
-    # --- KPI ---
-    st.subheader(f"핵심 지표 ({latest_month})" if latest_month else "핵심 지표")
-    col1, col2, col3, col4, col5 = st.columns(5)
-
-    cur_cnt = len(latest_set) if len(latest_set) > 0 else len(latest_res)
-    prev_cnt = len(prev_set) if len(prev_set) > 0 else len(prev_res)
-    cur_rev = latest_set['시술금액'].sum() if len(latest_set) > 0 else 0
-    prev_rev = prev_set['시술금액'].sum() if len(prev_set) > 0 else 0
-    cur_comm = latest_set['수수료금액'].sum() if len(latest_set) > 0 else 0
-    prev_comm = prev_set['수수료금액'].sum() if len(prev_set) > 0 else 0
-    avg_price = cur_rev / cur_cnt if cur_cnt > 0 else 0
-    prev_avg = prev_rev / prev_cnt if prev_cnt > 0 else 0
-
     def pct_delta(cur, prev):
         return f"{(cur - prev) / max(prev, 1) * 100:+.1f}%" if prev > 0 else None
 
-    with col1:
-        st.metric("시/수술 완료", f"{cur_cnt:,}건", pct_delta(cur_cnt, prev_cnt))
-    with col2:
-        st.metric("정산 매출", format_krw(cur_rev), pct_delta(cur_rev, prev_rev))
-    with col3:
-        st.metric("수수료 매출", format_krw(cur_comm), pct_delta(cur_comm, prev_comm))
-    with col4:
-        st.metric("인당 객단가", format_krw(avg_price), pct_delta(avg_price, prev_avg))
-    with col5:
-        nat_count = latest_set['국적'].nunique() if len(latest_set) > 0 else latest_res['고객국적'].nunique()
-        st.metric("참여 국적", f"{nat_count}개국")
+    # ────────────────────────────────────────────
+    # 상단: 전체 서비스 성과 (필터 무관, 최신 정산월 기준)
+    # ────────────────────────────────────────────
+    settle_latest = all_months_settle[-1] if all_months_settle else None
+    settle_prev = all_months_settle[-2] if len(all_months_settle) >= 2 else None
 
-    # --- 운영 현황 (내부리포트 기반) ---
-    if df_monthly is not None and latest_month:
-        m_row = df_monthly[df_monthly['월'] == latest_month]
-        if len(m_row) > 0:
-            r = m_row.iloc[0]
-            # 전체 예약 접수 계산 (완료 + 취소+노쇼 + 기타)
-            all_month = df_all[df_all['월'] == latest_month] if df_all is not None else pd.DataFrame()
-            total_접수 = len(all_month)
-            cancel_cnt = len(all_month[all_month['예약상태'] == '예약 취소']) if len(all_month) > 0 else 0
-            noshow_cnt = len(all_month[all_month['예약상태'].str.lower().str.contains('no-show|no show|noshow', na=False)]) if len(all_month) > 0 else 0
+    if settle_latest and len(df_settle) > 0:
+        all_latest_set = df_settle[df_settle['정산월'] == settle_latest]
+        all_prev_set = df_settle[df_settle['정산월'] == settle_prev] if settle_prev else pd.DataFrame()
 
-            st.markdown("")
-            st.subheader(f"{latest_month} 운영 현황")
-            c1, c2, c3, c4 = st.columns(4)
-            c1.metric("전체 예약 접수", f"{total_접수}건")
-            c2.metric("시/수술 완료", f"{int(r['완료건수'])}건")
-            c3.metric("예약 취소", f"{cancel_cnt}건")
-            c4.metric("No-show", f"{noshow_cnt}건")
+        settle_latest_kr = f"{settle_latest.split('-')[0]}년 {int(settle_latest.split('-')[1])}월"
+        st.subheader(f"📊 {settle_latest_kr} 전체 서비스 성과")
+        st.caption("전체 언니가이드 서비스 기준 (필터 무관)")
+
+        ac1, ac2, ac3, ac4, ac5 = st.columns(5)
+        all_cnt = len(all_latest_set)
+        all_prev_cnt = len(all_prev_set)
+        all_rev = all_latest_set['시술금액'].sum()
+        all_prev_rev = all_prev_set['시술금액'].sum() if len(all_prev_set) > 0 else 0
+        all_comm = all_latest_set['수수료금액'].sum()
+        all_avg = all_rev / all_cnt if all_cnt > 0 else 0
+
+        ac1.metric("시/수술 완료", f"{all_cnt:,}건", pct_delta(all_cnt, all_prev_cnt))
+        ac2.metric("정산 매출", format_krw(all_rev), pct_delta(all_rev, all_prev_rev))
+        ac3.metric("수수료 매출", format_krw(all_comm))
+        ac4.metric("인당 객단가", format_krw(all_avg))
+        ac5.metric("참여 국적", f"{all_latest_set['국적'].nunique()}개국")
+
+        # 운영 현황 (최신월, 전체 기준)
+        if df_all is not None:
+            all_month_df = df_all[df_all['월'] == settle_latest]
+            if len(all_month_df) > 0:
+                oc1, oc2, oc3, oc4 = st.columns(4)
+                oc1.metric("전체 예약 접수", f"{len(all_month_df)}건")
+                completed_cnt = len(all_month_df[all_month_df['예약상태'] == '시/수술 완료'])
+                oc2.metric("시/수술 완료", f"{completed_cnt}건")
+                cancel_cnt = len(all_month_df[all_month_df['예약상태'] == '예약 취소'])
+                oc3.metric("예약 취소", f"{cancel_cnt}건")
+                noshow_cnt = len(all_month_df[all_month_df['예약상태'].str.lower().str.contains('no-show|no show|noshow', na=False)])
+                oc4.metric("No-show", f"{noshow_cnt}건")
+
+    st.divider()
+
+    # ────────────────────────────────────────────
+    # 하단: 필터 반응 성과 (선택 기간 · 국적 · 병원)
+    # ────────────────────────────────────────────
+    filter_desc_parts = []
+    if month_range[0] != month_range[1]:
+        filter_desc_parts.append(f"기간: {month_range[0]} ~ {month_range[1]}")
+    else:
+        filter_desc_parts.append(f"기간: {month_range[0]}")
+    if selected_nationalities:
+        filter_desc_parts.append(f"국적: {', '.join(selected_nationalities[:3])}{'...' if len(selected_nationalities) > 3 else ''}")
+    if selected_hospitals:
+        filter_desc_parts.append(f"병원: {', '.join(selected_hospitals[:2])}{'...' if len(selected_hospitals) > 2 else ''}")
+    filter_label = " · ".join(filter_desc_parts)
+
+    st.subheader("🔍 선택 기간 성과")
+    st.caption(f"현재 필터: {filter_label}")
+
+    # 필터된 데이터 KPI
+    f_cnt = len(filtered_set) if len(filtered_set) > 0 else len(filtered_res)
+    f_rev = filtered_set['시술금액'].sum() if len(filtered_set) > 0 else filtered_res['실제금액'].sum()
+    f_comm = filtered_set['수수료금액'].sum() if len(filtered_set) > 0 else 0
+    f_avg = f_rev / f_cnt if f_cnt > 0 else 0
+    f_nat = filtered_set['국적'].nunique() if len(filtered_set) > 0 else filtered_res['고객국적'].nunique()
+    f_hosp = filtered_set['병원명'].nunique() if len(filtered_set) > 0 else filtered_res['병원명'].nunique()
+
+    fc1, fc2, fc3, fc4, fc5, fc6 = st.columns(6)
+    fc1.metric("완료 건수", f"{f_cnt:,}건")
+    fc2.metric("정산 매출", format_krw(f_rev))
+    fc3.metric("수수료", format_krw(f_comm))
+    fc4.metric("객단가", format_krw(f_avg))
+    fc5.metric("국적 수", f"{f_nat}개국")
+    fc6.metric("병원 수", f"{f_hosp}개")
 
     st.markdown("")
 
-    # --- 월별 트렌드 차트 (내부리포트 우선) ---
+    # --- 월별 트렌드 차트 (필터 반응) ---
     st.subheader("월별 트렌드")
-    col_c1, col_c2 = st.columns(2)
+    st.caption("선택 필터가 적용된 월별 추이입니다.")
 
+    # 필터된 데이터로 월별 집계
+    if len(filtered_set) > 0:
+        monthly_filtered = filtered_set.groupby('정산월').agg(
+            건수=('시술금액', 'count'), 매출=('시술금액', 'sum'), 수수료=('수수료금액', 'sum'),
+        ).reset_index().sort_values('정산월')
+        monthly_filtered['누적건수'] = monthly_filtered['건수'].cumsum()
+        m_labels = monthly_filtered['정산월'].tolist()
+        m_counts = monthly_filtered['건수'].tolist()
+        m_revenues = monthly_filtered['매출'].tolist()
+        m_commissions = monthly_filtered['수수료'].tolist()
+        m_cum = monthly_filtered['누적건수'].tolist()
+    else:
+        monthly_filtered_r = filtered_res.groupby('월').agg(건수=('월', 'count'), 매출=('실제금액', 'sum')).reset_index().sort_values('월')
+        monthly_filtered_r['누적건수'] = monthly_filtered_r['건수'].cumsum()
+        m_labels = monthly_filtered_r['월'].tolist()
+        m_counts = monthly_filtered_r['건수'].tolist()
+        m_revenues = monthly_filtered_r['매출'].tolist()
+        m_commissions = [0] * len(m_labels)
+        m_cum = monthly_filtered_r['누적건수'].tolist()
+
+    col_c1, col_c2 = st.columns(2)
     with col_c1:
-        if df_monthly is not None:
-            fig1 = go.Figure()
-            fig1.add_trace(go.Bar(
-                x=df_monthly['월'], y=df_monthly['완료건수'],
-                name='완료 건수', marker_color=BRAND_ORANGE, opacity=0.8,
-                text=df_monthly['완료건수'].apply(lambda x: int(x) if pd.notna(x) else 0), textposition='outside',
-            ))
-            fig1.add_trace(go.Scatter(
-                x=df_monthly['월'], y=df_monthly['완료건수'].cumsum(),
-                name='누적 건수', line=dict(color=BRAND_PLUM, width=2.5),
-                mode='lines+markers', yaxis='y2',
-            ))
-            fig1.update_layout(
-                title="월별 완료 건수 & 누적",
-                yaxis=dict(title="월별 건수"), yaxis2=dict(title="누적", overlaying='y', side='right'),
-                legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5),
-                height=420, margin=dict(t=50, b=80),
-            )
-            st.plotly_chart(fig1, use_container_width=True)
-        else:
-            monthly_res = df_completed.groupby('월').size().reset_index(name='건수').sort_values('월')
-            monthly_res['누적'] = monthly_res['건수'].cumsum()
-            fig1 = go.Figure()
-            fig1.add_trace(go.Bar(x=monthly_res['월'], y=monthly_res['건수'], name='완료', marker_color=BRAND_ORANGE, text=monthly_res['건수'], textposition='outside'))
-            fig1.add_trace(go.Scatter(x=monthly_res['월'], y=monthly_res['누적'], name='누적', line=dict(color=BRAND_PLUM, width=2.5), mode='lines+markers', yaxis='y2'))
-            fig1.update_layout(title="월별 완료 건수", yaxis=dict(title="건수"), yaxis2=dict(title="누적", overlaying='y', side='right'), height=420, margin=dict(t=50, b=80), legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5))
-            st.plotly_chart(fig1, use_container_width=True)
+        fig1 = go.Figure()
+        fig1.add_trace(go.Bar(x=m_labels, y=m_counts, name='완료 건수', marker_color=BRAND_ORANGE, opacity=0.8, text=m_counts, textposition='outside'))
+        fig1.add_trace(go.Scatter(x=m_labels, y=m_cum, name='누적 건수', line=dict(color=BRAND_PLUM, width=2.5), mode='lines+markers', yaxis='y2'))
+        fig1.update_layout(
+            title="월별 완료 건수 & 누적",
+            yaxis=dict(title="건수"), yaxis2=dict(title="누적", overlaying='y', side='right'),
+            legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5),
+            height=420, margin=dict(t=50, b=80),
+        )
+        st.plotly_chart(fig1, use_container_width=True)
 
     with col_c2:
-        if df_monthly is not None:
-            fig2 = go.Figure()
-            fig2.add_trace(go.Bar(
-                x=df_monthly['월'], y=df_monthly['시수술금액'],
-                name='시/수술 금액', marker_color=BRAND_ORANGE, opacity=0.8,
-                text=[format_krw(v) for v in df_monthly['시수술금액']], textposition='outside',
-            ))
-            fig2.add_trace(go.Bar(
-                x=df_monthly['월'], y=df_monthly['수수료매출'],
-                name='수수료 매출', marker_color=BRAND_GREEN, opacity=0.7,
-            ))
-            fig2.update_layout(
-                title="월별 매출 & 수수료",
-                yaxis=dict(title="금액 (원)"), barmode='group',
-                legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5),
-                height=420, margin=dict(t=50, b=80),
-            )
-            st.plotly_chart(fig2, use_container_width=True)
-        elif len(df_settle) > 0:
-            ms = df_settle.groupby('정산월').agg(매출=('시술금액','sum'), 수수료=('수수료금액','sum')).reset_index().sort_values('정산월')
-            fig2 = go.Figure()
-            fig2.add_trace(go.Bar(x=ms['정산월'], y=ms['매출'], name='매출', marker_color=BRAND_ORANGE, text=[format_krw(v) for v in ms['매출']], textposition='outside'))
-            fig2.add_trace(go.Bar(x=ms['정산월'], y=ms['수수료'], name='수수료', marker_color=BRAND_GREEN))
-            fig2.update_layout(title="월별 매출", barmode='group', height=420, margin=dict(t=50, b=80), legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5))
-            st.plotly_chart(fig2, use_container_width=True)
+        fig2 = go.Figure()
+        fig2.add_trace(go.Bar(x=m_labels, y=m_revenues, name='정산 매출', marker_color=BRAND_ORANGE, opacity=0.8, text=[format_krw(v) for v in m_revenues], textposition='outside'))
+        if any(c > 0 for c in m_commissions):
+            fig2.add_trace(go.Bar(x=m_labels, y=m_commissions, name='수수료', marker_color=BRAND_GREEN, opacity=0.7))
+        fig2.update_layout(
+            title="월별 매출 & 수수료",
+            yaxis=dict(title="금액 (원)"), barmode='group',
+            legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5),
+            height=420, margin=dict(t=50, b=80),
+        )
+        st.plotly_chart(fig2, use_container_width=True)
 
-    # --- 월별 성장률 테이블 ---
-    st.subheader("월별 성장률 (MoM)")
-    if df_monthly is not None:
-        display_m = df_monthly.copy()
-        display_m['시수술금액_표시'] = display_m['시수술금액'].apply(format_krw)
-        display_m['수수료매출_표시'] = display_m['수수료매출'].apply(format_krw)
-        display_m['평균객단가_표시'] = display_m['평균객단가'].apply(format_krw)
-        display_m['건수MoM'] = display_m['완료건수'].pct_change().apply(lambda x: f"{x*100:+.1f}%" if pd.notna(x) else '-')
-        display_m['매출MoM'] = display_m['시수술금액'].pct_change().apply(lambda x: f"{x*100:+.1f}%" if pd.notna(x) else '-')
+    # --- MoM 테이블 (필터 반응) ---
+    if len(m_labels) > 0:
+        st.subheader("월별 성장률 (MoM)")
+        mom_data = []
+        for i in range(len(m_labels)):
+            row = {'월': m_labels[i], '완료건수': m_counts[i], '정산매출': m_revenues[i], '수수료': m_commissions[i]}
+            row['객단가'] = m_revenues[i] / m_counts[i] if m_counts[i] > 0 else 0
+            if i > 0 and m_counts[i - 1] > 0:
+                row['건수MoM'] = f"{(m_counts[i] - m_counts[i-1]) / m_counts[i-1] * 100:+.1f}%"
+            else:
+                row['건수MoM'] = '-'
+            if i > 0 and m_revenues[i - 1] > 0:
+                row['매출MoM'] = f"{(m_revenues[i] - m_revenues[i-1]) / m_revenues[i-1] * 100:+.1f}%"
+            else:
+                row['매출MoM'] = '-'
+            mom_data.append(row)
+        df_mom = pd.DataFrame(mom_data)
+        df_mom_disp = df_mom.copy()
+        df_mom_disp['정산매출'] = df_mom_disp['정산매출'].apply(format_krw)
+        df_mom_disp['수수료'] = df_mom_disp['수수료'].apply(format_krw)
+        df_mom_disp['객단가'] = df_mom_disp['객단가'].apply(format_krw)
         st.dataframe(
-            display_m[['월', '완료건수', '시수술금액_표시', '수수료매출_표시', '평균객단가_표시', '취소노쇼', '건수MoM', '매출MoM']].rename(columns={
-                '시수술금액_표시': '시/수술 금액', '수수료매출_표시': '수수료', '평균객단가_표시': '객단가',
-                '취소노쇼': '취소+노쇼', '건수MoM': '건수 MoM', '매출MoM': '매출 MoM',
+            df_mom_disp[['월', '완료건수', '정산매출', '수수료', '객단가', '건수MoM', '매출MoM']].rename(columns={
+                '건수MoM': '건수 MoM', '매출MoM': '매출 MoM',
             }),
             use_container_width=True, hide_index=True,
         )
