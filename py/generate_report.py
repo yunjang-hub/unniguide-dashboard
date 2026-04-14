@@ -818,21 +818,31 @@ common_html = f"""<!DOCTYPE html>
   <div class="hospital-grid">{hospital_cards}</div>
 </div>
 
-<!-- FAQ -->
+<!-- 예약 성공 공식 -->
 <div class="section">
-  <div class="section-title"><span class="icon">💡</span> 언니가이드 더 잘 활용하는 법</div>
-  <div class="card">
-    <div class="faq-item"><h4>Q1. 수수료 구조는?</h4><p>시술: 총 모객 금액의 <strong>10%</strong> / 수술: 총 모객 금액의 <strong>20%</strong></p></div>
-    <div class="faq-item"><h4>Q2. 예약을 더 많이 받으려면?</h4><p>언니가이드에서 예약이 활발한 병원들의 공통점은 다음과 같습니다.</p>
-      <ul style="margin:8px 0 0 20px;font-size:14px;color:var(--text-light);line-height:1.8;">
-        <li>병원에서 보유한 <strong>전체 장비 리스트</strong>를 전달</li>
-        <li>병원 보유 <strong>전체 수가를 투명하게 전달</strong>하여 상담사들이 빠르게 고객 안내 가능</li>
-        <li>오프라인 센터의 경우, 당일·익일 예약이 가장 많아 원내 <strong>언어 응대자 보유</strong>가 큰 메리트</li>
-        <li>고객 예약 및 수가 확인 요청 인입 시 <strong>1시간 이내 답변</strong></li>
-        <li>언니가이드 컨설턴트분들과의 <strong>적극적인 소통 및 상호 피드백</strong> 교환</li>
-      </ul>
+  <div class="section-title"><span class="icon">💡</span> 예약을 더 많이 받는 5가지 성공 공식</div>
+  <p style="font-size:13px;color:var(--text-light);margin-bottom:14px;">언니가이드에서 예약이 활발한 병원들의 공통점을 정리했습니다.</p>
+  <div class="hospital-grid">
+    <div class="card" style="border-left:4px solid var(--primary);background:var(--primary-light);">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="background:var(--primary);color:white;font-weight:800;font-size:13px;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;">1</span><strong style="color:var(--plum);font-size:14px;">장비 리스트 공유</strong></div>
+      <div style="font-size:13px;color:var(--text);">병원에서 보유한 <strong>전체 장비 리스트</strong>를 투명하게 전달</div>
     </div>
-    <div class="faq-item"><h4>Q3. 언니가이드의 차별점은?</h4><p>한국인과 동일 수가 보장 (Equal Price), 4M+ 리뷰 기반 검증, 전담 컨설턴트 1:1 매칭.</p></div>
+    <div class="card" style="border-left:4px solid var(--primary);background:var(--primary-light);">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="background:var(--primary);color:white;font-weight:800;font-size:13px;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;">2</span><strong style="color:var(--plum);font-size:14px;">수가 투명 공개</strong></div>
+      <div style="font-size:13px;color:var(--text);">병원 보유 <strong>전체 수가</strong>를 공유하여 상담사가 빠르게 고객 안내 가능</div>
+    </div>
+    <div class="card" style="border-left:4px solid var(--primary);background:var(--primary-light);">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="background:var(--primary);color:white;font-weight:800;font-size:13px;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;">3</span><strong style="color:var(--plum);font-size:14px;">원내 언어 응대자</strong></div>
+      <div style="font-size:13px;color:var(--text);">오프라인 센터는 당일·익일 예약이 많아 <strong>원내 언어 응대자 보유</strong>가 큰 메리트</div>
+    </div>
+    <div class="card" style="border-left:4px solid var(--primary);background:var(--primary-light);">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="background:var(--primary);color:white;font-weight:800;font-size:13px;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;">4</span><strong style="color:var(--plum);font-size:14px;">1시간 이내 답변</strong></div>
+      <div style="font-size:13px;color:var(--text);">고객 예약·수가 확인 요청 인입 시 <strong>1시간 이내 답변</strong></div>
+    </div>
+    <div class="card" style="border-left:4px solid var(--primary);background:var(--primary-light);">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="background:var(--primary);color:white;font-weight:800;font-size:13px;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;">5</span><strong style="color:var(--plum);font-size:14px;">컨설턴트와 적극 소통</strong></div>
+      <div style="font-size:13px;color:var(--text);">언니가이드 컨설턴트와의 <strong>적극적 소통·상호 피드백</strong> 교환</div>
+    </div>
   </div>
 </div>
 
