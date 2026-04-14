@@ -224,7 +224,7 @@ body {{ font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR',s
   <div class="header-inner">
     <div class="logo">UNNI GUIDE</div>
     <h1>📊 병원 리포트 인덱스</h1>
-    <div class="sub">{report_month_kr} · 파트너 병원 {total}개 성과 한눈에 보기</div>
+    <div class="sub">{report_month_kr} · 정산 병원 {total}개 성과 한눈에 보기</div>
   </div>
 </div>
 
@@ -232,7 +232,7 @@ body {{ font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR',s
 
   <!-- 요약 -->
   <div class="summary-strip">
-    <div class="stat-card"><div class="label">총 파트너 병원</div><div class="value">{total}개</div><div class="sub">정산 기준</div></div>
+    <div class="stat-card"><div class="label">총 정산 병원</div><div class="value">{total}개</div><div class="sub">정산 기준</div></div>
     <div class="stat-card"><div class="label">총 정산 매출</div><div class="value">{format_krw(total_revenue)}</div><div class="sub">{report_month_kr}</div></div>
     <div class="stat-card"><div class="label">상위 20% 병원</div><div class="value">{top_20_threshold}개</div><div class="sub">TOP tier</div></div>
     <div class="stat-card"><div class="label">상위 20% 매출 비중</div><div class="value">{top_share:.1f}%</div><div class="sub">전체 매출 중</div></div>
