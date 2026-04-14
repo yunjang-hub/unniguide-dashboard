@@ -1049,6 +1049,8 @@ for h_name in all_canonical:
             return p and str(p).strip().lower() not in ('nan', 'none', '')
 
         top1_clean = [p for p in top1_procedures if clean_proc(p)][:5]
+        # 1위 병원 시술별 건수
+        top1_procs_dict = {p[0]: p[1] for p in sorted([(k, v) for k, v in hospital_monthly[top1_hospital][REPORT_MONTH]['procedures'].items() if clean_proc(k)], key=lambda x: x[1], reverse=True)}
         hospital_procs_dict = {p[0]: p[1] for p in proc_sorted if clean_proc(p[0])}
 
         if top1_clean:
@@ -1056,23 +1058,23 @@ for h_name in all_canonical:
             compare_rows = ""
             missing_count = 0
             for i, proc in enumerate(top1_clean, 1):
-                # 키워드 기반 매칭 (부분 포함이면 보유로 간주)
+                top1_cnt = top1_procs_dict.get(proc, 0)
+                # 키워드 기반 매칭
                 owned = False
                 owned_count = 0
                 for hp, cnt in hospital_procs_dict.items():
-                    # 핵심 키워드 추출 (첫 단어 or 전체)
                     key = proc.split(',')[0].split('+')[0].split(' ')[0].strip()
                     if key and (key in hp or hp in proc):
                         owned = True
                         owned_count += cnt
                 if owned:
-                    badge = f'<span style="background:#E8FBF5;color:#00896A;padding:4px 10px;border-radius:12px;font-size:12px;font-weight:600;">✓ 보유 ({owned_count}건)</span>'
+                    badge = f'<span style="background:#E8FBF5;color:#00896A;padding:4px 10px;border-radius:12px;font-size:12px;font-weight:600;">✓ 귀원 {owned_count}건</span>'
                     row_bg = ''
                 else:
                     badge = '<span style="background:#FFF3E0;color:#E67E22;padding:4px 10px;border-radius:12px;font-size:12px;font-weight:700;">📈 유입 확대 여지</span>'
                     row_bg = 'background:#FFF8F5;'
                     missing_count += 1
-                compare_rows += f'<tr style="{row_bg}"><td style="text-align:center;font-weight:700;color:var(--primary);">{i}</td><td style="font-size:14px;font-weight:500;">{proc}</td><td style="text-align:right;">{badge}</td></tr>'
+                compare_rows += f'<tr style="{row_bg}"><td style="text-align:center;font-weight:700;color:var(--primary);">{i}</td><td style="font-size:14px;font-weight:500;">{proc}</td><td class="num" style="font-size:13px;color:var(--text-light);">{top1_cnt}건</td><td style="text-align:right;">{badge}</td></tr>'
 
             summary_text = f'<strong style="color:#E67E22;">{missing_count}개 시술</strong>에서 유입 확대 여지 — 추가 마케팅 시 매출 상승 기회' if missing_count > 0 else '<strong style="color:#00896A;">모든 TOP 시술 보유 중</strong>'
 
@@ -1083,9 +1085,10 @@ for h_name in all_canonical:
   <table class="data-table" style="background:white;">
     <thead>
       <tr>
-        <th style="width:60px;text-align:center;">순위</th>
+        <th style="width:50px;text-align:center;">순위</th>
         <th>1위 병원 TOP 시술</th>
-        <th style="text-align:right;width:180px;">귀원 보유 현황</th>
+        <th class="num" style="width:70px;">1위 건수</th>
+        <th style="text-align:right;width:160px;">귀원 현황</th>
       </tr>
     </thead>
     <tbody>{compare_rows}</tbody>
@@ -1115,8 +1118,11 @@ for h_name in all_canonical:
     # 벤치마크 HTML (상위 20% 병원에만 노출)
     pct_c = ri.get('pct_count', 0)
     pct_r = ri.get('pct_revenue', 0)
-    top_pct_c = max(1, 100 - pct_c + round(100/max(total_active,1)))
-    top_pct_r = max(1, 100 - pct_r + round(100/max(total_active,1)))
+    raw_pct_c = max(1, 100 - pct_c + round(100/max(total_active,1)))
+    raw_pct_r = max(1, 100 - pct_r + round(100/max(total_active,1)))
+    # 10% 단위 내림 (16% → 10%, 22% → 20%)
+    top_pct_c = max(10, (raw_pct_c // 10) * 10)
+    top_pct_r = max(10, (raw_pct_r // 10) * 10)
 
     # 예약 건수 또는 매출 기준 중 하나라도 상위 20% 안에 들면 노출
     show_benchmark = (top_pct_c <= 20) or (top_pct_r <= 20)
@@ -1279,25 +1285,23 @@ for h_name in all_canonical:
 const D = {h_chart};
 const C = {CHART_COLORS};
 
-// 월별 추이 차트 (정산 매출 바 + 매출 MoM 선)
+// 월별 추이 차트 (정산 매출 바)
 new Chart(document.getElementById('monthlyChart'),{{
   type:'bar',
   data:{{
     labels:D.monthly_labels,
     datasets:[
-      {{label:'정산 매출',data:D.monthly_revenue,backgroundColor:'#FF6A3B88',borderColor:'#FF6A3B',borderWidth:1,borderRadius:6,yAxisID:'y',order:2}},
-      {{label:'매출 MoM(%)',data:D.monthly_mom,type:'line',borderColor:'#00B894',backgroundColor:'#00B89422',pointRadius:5,pointBackgroundColor:'#00B894',tension:0.3,yAxisID:'y2',borderWidth:2.5,order:1,spanGaps:true}}
+      {{label:'정산 매출',data:D.monthly_revenue,backgroundColor:'#FF6A3B88',borderColor:'#FF6A3B',borderWidth:1,borderRadius:6}}
     ]
   }},
   options:{{
     responsive:true,maintainAspectRatio:false,
     plugins:{{
-      legend:{{position:'top'}},
-      tooltip:{{callbacks:{{label:function(ctx){{const v=ctx.parsed.y;if(ctx.dataset.label==='정산 매출'){{return '정산 매출: '+(v/10000).toLocaleString()+'만원';}}if(ctx.dataset.label.includes('MoM')){{return 'MoM: '+(v>0?'+':'')+v+'%';}}return ctx.dataset.label+': '+v;}}}}}}
+      legend:{{display:false}},
+      tooltip:{{callbacks:{{label:function(ctx){{return '정산 매출: '+(ctx.parsed.y/10000).toLocaleString()+'만원';}}}}}}
     }},
     scales:{{
-      y:{{position:'left',title:{{display:true,text:'정산 매출 (원)'}},grid:{{color:'#F1F2F6'}},ticks:{{callback:v=>(v/10000).toFixed(0)+'만'}}}},
-      y2:{{position:'right',title:{{display:true,text:'MoM (%)'}},grid:{{display:false}},ticks:{{callback:v=>v+'%'}}}}
+      y:{{title:{{display:true,text:'정산 매출 (원)'}},grid:{{color:'#F1F2F6'}},ticks:{{callback:v=>(v/10000).toFixed(0)+'만'}}}}
     }}
   }}
 }});
@@ -1305,6 +1309,9 @@ new Chart(document.getElementById('monthlyChart'),{{
 // 국적 차트
 if(D.nat_labels.length>0){{
   new Chart(document.getElementById('natPie'),{{type:'doughnut',data:{{labels:D.nat_labels,datasets:[{{data:D.nat_counts,backgroundColor:C,borderWidth:2,borderColor:'#fff'}}]}},options:{{responsive:true,maintainAspectRatio:false,plugins:{{legend:{{position:'right',labels:{{font:{{size:12}}}}}}}}}}}});
+  // % 표시 플러그인
+  Chart.getChart('natPie').options.plugins.tooltip = {{callbacks:{{label:function(ctx){{const total=ctx.dataset.data.reduce((a,b)=>a+b,0);const pct=(ctx.parsed/total*100).toFixed(1);return ctx.label+': '+pct+'%';}}}}}};
+  Chart.getChart('natPie').update();
   new Chart(document.getElementById('natBar'),{{type:'bar',data:{{labels:D.nat_labels,datasets:[{{data:D.nat_prices,backgroundColor:C.map(c=>c+'88'),borderColor:C,borderWidth:1,borderRadius:6}}]}},options:{{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{{legend:{{display:false}}}},scales:{{x:{{ticks:{{callback:v=>(v/10000).toFixed(0)+'만'}}}},y:{{grid:{{display:false}}}}}}}}}});
 }}
 </script>

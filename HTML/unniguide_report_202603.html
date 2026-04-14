@@ -151,13 +151,6 @@ body {
 .hospital-link .h-stats { font-size:13px; color:var(--text-light); }
 .hospital-link .h-stats strong { color:var(--primary); }
 
-/* Sticky Nav */
-.top-nav { position:sticky; top:0; z-index:100; background:rgba(255,255,255,0.95); backdrop-filter:blur(10px); border-bottom:1px solid var(--border); padding:10px 0; }
-.top-nav-inner { max-width:1100px; margin:0 auto; padding:0 20px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
-.top-nav a { text-decoration:none; color:var(--text-light); font-size:13px; font-weight:600; padding:6px 12px; border-radius:8px; transition:all 0.15s; }
-.top-nav a:hover { background:var(--primary-light); color:var(--primary-dark); }
-.top-nav a.active { background:var(--primary); color:white; }
-
 @media (max-width:768px) {
   .header h1 { font-size:20px; }
   .metric-grid { grid-template-columns:repeat(2,1fr); }
@@ -170,15 +163,6 @@ body {
 }
 </style>
 </head><body>
-
-
-<div class="top-nav">
-  <div class="top-nav-inner">
-    <a href="index.html" class="">🏠 Index</a>
-    <a href="unniguide_report_202603.html" class="active">📈 전체 트렌드</a>
-    <a href="index.html#hospitals-section" class="">🏥 병원별 리포트</a>
-  </div>
-</div>
 
 
 <div class="header">
@@ -255,14 +239,14 @@ body {
 <!-- 국적별 시술 -->
 <div class="section">
   <div class="section-title"><span class="icon">🔍</span> 국적별 선호 시술 TOP 5</div>
-  <div class="card"><h3 style="font-size:16px;margin-bottom:12px;">🇹🇭 태국</h3><table class="data-table"><thead><tr><th>시술/수술명</th><th class="num">건수</th></tr></thead><tbody><tr><td>보톡스</td><td class="num">23건</td></tr><tr><td>포텐자</td><td class="num">12건</td></tr><tr><td>울쎄라</td><td class="num">11건</td></tr><tr><td>물광주사</td><td class="num">10건</td></tr><tr><td>온다</td><td class="num">9건</td></tr></tbody></table></div>
-<div class="card"><h3 style="font-size:16px;margin-bottom:12px;">🇹🇼 대만</h3><table class="data-table"><thead><tr><th>시술/수술명</th><th class="num">건수</th></tr></thead><tbody><tr><td>온다</td><td class="num">5건</td></tr><tr><td>보톡스</td><td class="num">4건</td></tr><tr><td>리프팅시술</td><td class="num">4건</td></tr><tr><td>올리지오</td><td class="num">4건</td></tr><tr><td>포텐자</td><td class="num">4건</td></tr></tbody></table></div>
-<div class="card"><h3 style="font-size:16px;margin-bottom:12px;">🇺🇸 미국</h3><table class="data-table"><thead><tr><th>시술/수술명</th><th class="num">건수</th></tr></thead><tbody><tr><td>울쎄라</td><td class="num">11건</td></tr><tr><td>리쥬란</td><td class="num">7건</td></tr><tr><td>포텐자</td><td class="num">7건</td></tr><tr><td>보톡스</td><td class="num">6건</td></tr><tr><td>써마지</td><td class="num">4건</td></tr></tbody></table></div>
-<div class="card"><h3 style="font-size:16px;margin-bottom:12px;">🇨🇳 중국</h3><table class="data-table"><thead><tr><th>시술/수술명</th><th class="num">건수</th></tr></thead><tbody><tr><td>포텐자</td><td class="num">2건</td></tr><tr><td>울쎄라</td><td class="num">1건</td></tr><tr><td>온다</td><td class="num">1건</td></tr><tr><td>지방분해주사</td><td class="num">1건</td></tr><tr><td>올리지오</td><td class="num">1건</td></tr></tbody></table></div>
-<div class="card"><h3 style="font-size:16px;margin-bottom:12px;">🇲🇳 몽골</h3><table class="data-table"><thead><tr><th>시술/수술명</th><th class="num">건수</th></tr></thead><tbody><tr><td>보톡스</td><td class="num">3건</td></tr><tr><td>트리플레이저</td><td class="num">1건</td></tr><tr><td>써마지</td><td class="num">1건</td></tr><tr><td>리쥬란</td><td class="num">1건</td></tr><tr><td>포텐자</td><td class="num">1건</td></tr></tbody></table></div>
-<div class="card"><h3 style="font-size:16px;margin-bottom:12px;">🇸🇬 싱가포르</h3><table class="data-table"><thead><tr><th>시술/수술명</th><th class="num">건수</th></tr></thead><tbody><tr><td>피코레이저</td><td class="num">2건</td></tr><tr><td>울쎄라</td><td class="num">1건</td></tr><tr><td>리쥬란</td><td class="num">1건</td></tr><tr><td>온다</td><td class="num">1건</td></tr><tr><td>보톡스</td><td class="num">1건</td></tr></tbody></table></div>
-<div class="card"><h3 style="font-size:16px;margin-bottom:12px;">🇲🇾 말레이시아</h3><table class="data-table"><thead><tr><th>시술/수술명</th><th class="num">건수</th></tr></thead><tbody><tr><td>보톡스</td><td class="num">2건</td></tr><tr><td>아쿠아필</td><td class="num">1건</td></tr><tr><td>피코레이저</td><td class="num">1건</td></tr><tr><td>셀르디엠</td><td class="num">1건</td></tr><tr><td>쥬베룩</td><td class="num">1건</td></tr></tbody></table></div>
-<div class="card"><h3 style="font-size:16px;margin-bottom:12px;">🇦🇺 호주</h3><table class="data-table"><thead><tr><th>시술/수술명</th><th class="num">건수</th></tr></thead><tbody><tr><td>제네시스</td><td class="num">2건</td></tr><tr><td>리쥬란</td><td class="num">2건</td></tr><tr><td>울쎄라</td><td class="num">2건</td></tr><tr><td>포텐자</td><td class="num">2건</td></tr><tr><td>보톡스</td><td class="num">2건</td></tr></tbody></table></div>
+  <div class="card"><h3 style="font-size:16px;margin-bottom:12px;">🇹🇭 태국</h3><table class="data-table"><thead><tr><th>시술/수술명</th><th class="num">건수</th></tr></thead><tbody><tr><td>보톡스</td><td class="num">3건</td></tr><tr><td>포텐자 얼굴전체 + 물광주사 2cc 더마샤인</td><td class="num">2건</td></tr><tr><td>이마, 눈가 보톡스</td><td class="num">2건</td></tr><tr><td>아이 슈링크+볼뉴머 300샷</td><td class="num">2건</td></tr><tr><td>인모드 FX(8분)+유핏주사 5cc, 슈링크 유니버스 300샷, 주름B, 턱끝F, co2 8개 sv</td><td class="num">1건</td></tr></tbody></table></div>
+<div class="card"><h3 style="font-size:16px;margin-bottom:12px;">🇹🇼 대만</h3><table class="data-table"><thead><tr><th>시술/수술명</th><th class="num">건수</th></tr></thead><tbody><tr><td>올리지오, 포텐자, 쥬베룩, 티타늄도 고민중</td><td class="num">2건</td></tr><tr><td>지방분해주사, 덴서티 등 리프팅</td><td class="num">2건</td></tr><tr><td>소프웨이브&（친구)엑소좀+울블랑 &  슈링크유니버스300샷</td><td class="num">1건</td></tr><tr><td>엑소좀+울블랑 &  슈링크유니버스(울트라)300샷</td><td class="num">1건</td></tr><tr><td>포텐자, 스킨부스터</td><td class="num">1건</td></tr></tbody></table></div>
+<div class="card"><h3 style="font-size:16px;margin-bottom:12px;">🇺🇸 미국</h3><table class="data-table"><thead><tr><th>시술/수술명</th><th class="num">건수</th></tr></thead><tbody><tr><td>울쎄라피 프라임</td><td class="num">4건</td></tr><tr><td>울쎄라프라임 총 600샷,써마지 600샷, 이마전체/눈가전체 보톡스 1부위, 주름보톡스1부워</td><td class="num">1건</td></tr><tr><td>이마 축소 상담 + 수술</td><td class="num">1건</td></tr><tr><td>포텐자, 쥬베룩, 리쥬란, 색소 레이저</td><td class="num">1건</td></tr><tr><td>포텐자 쥬베룩, 스타토닝</td><td class="num">1건</td></tr></tbody></table></div>
+<div class="card"><h3 style="font-size:16px;margin-bottom:12px;">🇨🇳 중국</h3><table class="data-table"><thead><tr><th>시술/수술명</th><th class="num">건수</th></tr></thead><tbody><tr><td>써마지_얼굴(300샷) × 1 (300shots)• 울쎄라 프라임_얼굴 × 4 (400shots• 턱보톡스(국산)(체험단) × 2 (100units )</td><td class="num">1건</td></tr><tr><td>원장님1:1온다&커팅주사</td><td class="num">1건</td></tr><tr><td>올리지오, 아이올리지오, 포텐자, 쥬베룩</td><td class="num">1건</td></tr><tr><td>포텐자 등 모공치료 (서브시전도 고민)</td><td class="num">1건</td></tr><tr><td>1. 리쥬란 힐러 4CC 2. 아이 리쥬란 1CC 3. 제오민 스킨보톡스 4CC </td><td class="num">1건</td></tr></tbody></table></div>
+<div class="card"><h3 style="font-size:16px;margin-bottom:12px;">🇲🇳 몽골</h3><table class="data-table"><thead><tr><th>시술/수술명</th><th class="num">건수</th></tr></thead><tbody><tr><td>트리플 레이저</td><td class="num">1건</td></tr><tr><td>보톡스</td><td class="num">1건</td></tr><tr><td>피코케어, 미간/이마/눈가 제오민 보톡스, 써마지 300샷, 리쥬란 HB 눈가 + 풀페이스</td><td class="num">1건</td></tr><tr><td>소노케어, 이마 보톡스, 포텐자</td><td class="num">1건</td></tr></tbody></table></div>
+<div class="card"><h3 style="font-size:16px;margin-bottom:12px;">🇸🇬 싱가포르</h3><table class="data-table"><thead><tr><th>시술/수술명</th><th class="num">건수</th></tr></thead><tbody><tr><td>Rejuran Healer 4cc + Rejuran Healer eye 1cc + 목주름 필러 + 이마 보톡스 + 바디 온다 + 바디 울쎄라 + 지방 분해주사</td><td class="num">1건</td></tr><tr><td>리투오</td><td class="num">1건</td></tr><tr><td>피코프락셀, 포텐자 얼굴전체</td><td class="num">1건</td></tr><tr><td>피코토닝, 이온토(미벡), 티타늄 브라이트닝 20kj</td><td class="num">1건</td></tr></tbody></table></div>
+<div class="card"><h3 style="font-size:16px;margin-bottom:12px;">🇲🇾 말레이시아</h3><table class="data-table"><thead><tr><th>시술/수술명</th><th class="num">건수</th></tr></thead><tbody><tr><td>턱 보톡스 + 풀페이스 피코 프락셀 + 풀 페이스 모피우스 + 아쿠아필 + 셀르디엠 + 수면마취 희망하심</td><td class="num">1건</td></tr><tr><td>미간 보톡스, 이마 보톡스, 사각턱 보톡스, 승모근 보톡스, 종아리 보톡스, 울쎄라피 프라임 300샷, 바디 인모드, 슬랜더 핏, 리쥬란 힐러, 쥬베룩 스킨</td><td class="num">1건</td></tr></tbody></table></div>
+<div class="card"><h3 style="font-size:16px;margin-bottom:12px;">🇦🇺 호주</h3><table class="data-table"><thead><tr><th>시술/수술명</th><th class="num">건수</th></tr></thead><tbody><tr><td>제네시스, 풀페이스 포텐자, 울쎄라 300샷, 눈가 보톡스, 스킨 보톡스, 리쥬란 힐러 4cc, 쥬베룩 아이</td><td class="num">1건</td></tr><tr><td>스타토닝 패키지, 울쎄라 300샷, 사각턱+승모근 보톡스, 풀페이스 포텐자, 제네시스, 리쥬란 힐러 4cc, 바디 온다</td><td class="num">1건</td></tr></tbody></table></div>
 
 </div>
 
@@ -359,31 +343,21 @@ body {
 </div>
 </div>
 
-<!-- 예약 성공 공식 -->
+<!-- FAQ -->
 <div class="section">
-  <div class="section-title"><span class="icon">💡</span> 예약을 더 많이 받는 5가지 성공 공식</div>
-  <p style="font-size:13px;color:var(--text-light);margin-bottom:14px;">언니가이드에서 예약이 활발한 병원들의 공통점을 정리했습니다.</p>
-  <div class="hospital-grid">
-    <div class="card" style="border-left:4px solid var(--primary);background:var(--primary-light);">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="background:var(--primary);color:white;font-weight:800;font-size:13px;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;">1</span><strong style="color:var(--plum);font-size:14px;">장비 리스트 공유</strong></div>
-      <div style="font-size:13px;color:var(--text);">병원에서 보유한 <strong>전체 장비 리스트</strong>를 투명하게 전달</div>
+  <div class="section-title"><span class="icon">💡</span> 언니가이드 더 잘 활용하는 법</div>
+  <div class="card">
+    <div class="faq-item"><h4>Q1. 수수료 구조는?</h4><p>시술: 총 모객 금액의 <strong>10%</strong> / 수술: 총 모객 금액의 <strong>20%</strong></p></div>
+    <div class="faq-item"><h4>Q2. 예약을 더 많이 받으려면?</h4><p>언니가이드에서 예약이 활발한 병원들의 공통점은 다음과 같습니다.</p>
+      <ul style="margin:8px 0 0 20px;font-size:14px;color:var(--text-light);line-height:1.8;">
+        <li>병원에서 보유한 <strong>전체 장비 리스트</strong>를 전달</li>
+        <li>병원 보유 <strong>전체 수가를 투명하게 전달</strong>하여 상담사들이 빠르게 고객 안내 가능</li>
+        <li>오프라인 센터의 경우, 당일·익일 예약이 가장 많아 원내 <strong>언어 응대자 보유</strong>가 큰 메리트</li>
+        <li>고객 예약 및 수가 확인 요청 인입 시 <strong>1시간 이내 답변</strong></li>
+        <li>언니가이드 컨설턴트분들과의 <strong>적극적인 소통 및 상호 피드백</strong> 교환</li>
+      </ul>
     </div>
-    <div class="card" style="border-left:4px solid var(--primary);background:var(--primary-light);">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="background:var(--primary);color:white;font-weight:800;font-size:13px;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;">2</span><strong style="color:var(--plum);font-size:14px;">수가 투명 공개</strong></div>
-      <div style="font-size:13px;color:var(--text);">병원 보유 <strong>전체 수가</strong>를 공유하여 상담사가 빠르게 고객 안내 가능</div>
-    </div>
-    <div class="card" style="border-left:4px solid var(--primary);background:var(--primary-light);">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="background:var(--primary);color:white;font-weight:800;font-size:13px;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;">3</span><strong style="color:var(--plum);font-size:14px;">원내 언어 응대자</strong></div>
-      <div style="font-size:13px;color:var(--text);">오프라인 센터는 당일·익일 예약이 많아 <strong>원내 언어 응대자 보유</strong>가 큰 메리트</div>
-    </div>
-    <div class="card" style="border-left:4px solid var(--primary);background:var(--primary-light);">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="background:var(--primary);color:white;font-weight:800;font-size:13px;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;">4</span><strong style="color:var(--plum);font-size:14px;">1시간 이내 답변</strong></div>
-      <div style="font-size:13px;color:var(--text);">고객 예약·수가 확인 요청 인입 시 <strong>1시간 이내 답변</strong></div>
-    </div>
-    <div class="card" style="border-left:4px solid var(--primary);background:var(--primary-light);">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="background:var(--primary);color:white;font-weight:800;font-size:13px;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;">5</span><strong style="color:var(--plum);font-size:14px;">컨설턴트와 적극 소통</strong></div>
-      <div style="font-size:13px;color:var(--text);">언니가이드 컨설턴트와의 <strong>적극적 소통·상호 피드백</strong> 교환</div>
-    </div>
+    <div class="faq-item"><h4>Q3. 언니가이드의 차별점은?</h4><p>한국인과 동일 수가 보장 (Equal Price), 4M+ 리뷰 기반 검증, 전담 컨설턴트 1:1 매칭.</p></div>
   </div>
 </div>
 
@@ -393,13 +367,13 @@ body {
   <div class="container">
     <p><strong>UNNI GUIDE</strong> | 강남언니 언니가이드 서비스</p>
     <p style="margin-top:4px;">본 리포트는 파트너 병원 전용 자료입니다. 무단 배포를 삼가해 주세요.</p>
-    <p style="margin-top:4px;opacity:0.7;">생성일: 2026년 04월 14일</p>
+    <p style="margin-top:4px;opacity:0.7;">생성일: 2026년 04월 13일</p>
   </div>
 </div>
 
 
 <script>
-const D = {"nat_labels": ["태국", "대만", "미국", "중국", "몽골", "싱가포르", "말레이시아", "호주", "영국", "캐나다"], "nat_counts": [66, 34, 30, 8, 4, 4, 2, 2, 2, 2], "nat_pcts": [40.7, 21.0, 18.5, 4.9, 2.5, 2.5, 1.2, 1.2, 1.2, 1.2], "nat_prices": [902507.0, 1313478.0, 2115933.0, 2235000.0, 385150.0, 1452825.0, 4754000.0, 3830300.0, 1413500.0, 2831400.0], "type_labels": ["시술", "수술"], "type_counts": [157, 5], "proc_names": ["보톡스", "울쎄라", "포텐자", "온다", "리쥬란", "필러", "슈링크", "아쿠아필", "쥬베룩", "물광주사"], "proc_counts": [46, 32, 30, 20, 19, 14, 13, 13, 13, 11]};
+const D = {"nat_labels": ["태국", "대만", "미국", "중국", "몽골", "싱가포르", "말레이시아", "호주", "영국", "캐나다"], "nat_counts": [66, 34, 30, 8, 4, 4, 2, 2, 2, 2], "nat_pcts": [40.7, 21.0, 18.5, 4.9, 2.5, 2.5, 1.2, 1.2, 1.2, 1.2], "nat_prices": [902507.0, 1313478.0, 2115933.0, 2235000.0, 385150.0, 1452825.0, 4754000.0, 3830300.0, 1413500.0, 2831400.0], "type_labels": ["시술", "수술"], "type_counts": [157, 5], "proc_names": ["보톡스", "울쎄라피 프라임", "아이 슈링크+볼뉴머 300샷", "올리지오, 포텐자, 쥬베룩, 티타늄도", "울쎄라", "지방분해주사, 덴서티 등 리프팅", "이마, 눈가 보톡스", "포텐자 얼굴전체 + 물광주사 2cc ", "인모드 FX(8분)+유핏주사 5cc,", "이마 보톡스, 울쎄라 바디 300샷,"], "proc_counts": [5, 4, 2, 2, 2, 2, 2, 2, 1, 1]};
 const C = ['#FF6A3B','#330C2E','#00B894','#FDCB6E','#0984E3','#E17055','#00CEC9','#A29BFE','#FD79A8','#55A3E8','#F39C12','#2ECC71','#E74C3C','#9B59B6','#1ABC9C'];
 new Chart(document.getElementById('natPie'),{type:'doughnut',data:{labels:D.nat_labels,datasets:[{data:D.nat_counts,backgroundColor:C,borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:12}}}}}});
 new Chart(document.getElementById('natBar'),{type:'bar',data:{labels:D.nat_labels,datasets:[{data:D.nat_prices,backgroundColor:C.map(c=>c+'88'),borderColor:C,borderWidth:1,borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{callback:v=>(v/10000).toFixed(0)+'만'}},y:{grid:{display:false}}}}});

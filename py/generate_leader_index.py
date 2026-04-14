@@ -73,6 +73,7 @@ for row in ws2.iter_rows(min_row=1, max_row=ws2.max_row, values_only=False):
             settle_records.append({
                 '정산월': current_month,
                 '병원명': normalize_hospital(hospital),
+                '국적': str(vals[4]).strip() if vals[4] else '',
                 '시술금액': float(vals[7]) if vals[7] else 0,
                 '수수료금액': float(vals[8]) if vals[8] else 0,
             })
@@ -92,6 +93,7 @@ h_agg = df_target.groupby('병원명').agg(
 h_agg['순위'] = range(1, len(h_agg) + 1)
 total = len(h_agg)
 top_20_threshold = max(1, round(total * 0.2))
+num_countries = df_target['국적'].nunique() if '국적' in df_target.columns else 0
 
 # ============================================================
 # 카드 HTML 생성
@@ -234,8 +236,7 @@ body {{ font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR',s
   <div class="summary-strip">
     <div class="stat-card"><div class="label">총 정산 병원</div><div class="value">{total}개</div><div class="sub">정산 기준</div></div>
     <div class="stat-card"><div class="label">총 정산 매출</div><div class="value">{format_krw(total_revenue)}</div><div class="sub">{report_month_kr}</div></div>
-    <div class="stat-card"><div class="label">상위 20% 병원</div><div class="value">{top_20_threshold}개</div><div class="sub">TOP tier</div></div>
-    <div class="stat-card"><div class="label">상위 20% 매출 비중</div><div class="value">{top_share:.1f}%</div><div class="sub">전체 매출 중</div></div>
+    <div class="stat-card"><div class="label">예약 국가 수</div><div class="value">{num_countries}개국</div><div class="sub">글로벌 고객</div></div>
   </div>
 
   <!-- 공통 리포트 -->

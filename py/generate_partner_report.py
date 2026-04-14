@@ -139,19 +139,20 @@ total_매출 = nat_stats['매출'].sum()
 avg_객단가 = total_매출 / total_건수 if total_건수 > 0 else 0
 num_국적 = len(nat_stats)
 
-# 국적별 테이블 HTML (% 비중만)
-nat_rows_html = ""
+# 국적별 비중 + 객단가 테이블 HTML
+nat_rows_with_price_html = ""
 for _, r in nat_stats.head(8).iterrows():
-    nat_rows_html += f'<tr><td>{r["국기"]} {r["국적"]}</td><td class="bold">{r["비중"]}%</td></tr>\n'
+    nat_rows_with_price_html += f'<tr><td>{r["국기"]} {r["국적"]}</td><td class="bold">{r["비중"]}%</td><td class="bold">{format_krw(r["객단가"])}</td></tr>\n'
 if len(nat_stats) > 8:
     etc_cnt = nat_stats.iloc[8:]['건수'].sum()
     etc_pct = (etc_cnt / total_건수 * 100)
-    nat_rows_html += f'<tr><td>🌍 기타 {len(nat_stats)-8}개국</td><td>{etc_pct:.1f}%</td></tr>\n'
+    nat_rows_with_price_html += f'<tr><td>🌍 기타 {len(nat_stats)-8}개국</td><td>{etc_pct:.1f}%</td><td>-</td></tr>\n'
 
-# 객단가 상위 차트 데이터 (TOP 5만, 수치 미노출)
-top_price = nat_stats[nat_stats['건수'] >= 2].sort_values('객단가', ascending=False).head(5)
-price_labels = [f"{r['국기']} {r['국적']}" for _, r in top_price.iterrows()]
-price_values = [int(r['객단가']) for _, r in top_price.iterrows()]
+# 주요 4개국 객단가 차트 데이터 (태국, 대만, 미국, 중국)
+focus_countries = ['태국', '대만', '미국', '중국']
+focus_data = nat_stats[nat_stats['국적'].isin(focus_countries)].sort_values('객단가', ascending=False)
+price_labels = [f"{r['국기']} {r['국적']}" for _, r in focus_data.iterrows()]
+price_values = [int(r['객단가']) for _, r in focus_data.iterrows()]
 
 chart_data = json.dumps({
     'labels': chart_labels, 'booking': chart_booking, 'visit': chart_visit,
@@ -246,7 +247,7 @@ td{{padding:5px 8px;text-align:center;border-bottom:1px solid #E9ECEF;}}
   <div class="section-title">센터 핵심 성과</div>
   <div class="kpi-grid" style="grid-template-columns:repeat(2,1fr);">
     <div class="kpi accent"><div class="label">센터 방문객 수</div><div class="value">{실제방문자:,}</div><div class="sub">일평균 {일평균방문:.0f}명 방문</div></div>
-    <div class="kpi"><div class="label">방문 고객 국적</div><div class="value">3개 언어권</div><div class="sub">영어 · 중국어 · 태국어</div></div>
+    <div class="kpi"><div class="label">센터 방문객 국적</div><div class="value">20+개국</div><div class="sub">글로벌 고객</div></div>
   </div>
   <div class="note">* 방문객 수는 예약 건 단위로 집계 (1건 예약 = 1명 카운트). 함께 방문한 대기 고객은 트래킹 대상에서 제외.</div>
 </div>
@@ -299,18 +300,16 @@ td{{padding:5px 8px;text-align:center;border-bottom:1px solid #E9ECEF;}}
 <div class="section">
   <div class="row row-2">
     <div class="card">
-      <h3>국적별 고객 비중 (3월)</h3>
+      <h3>국적별 고객 비중 · 객단가 (3월)</h3>
       <table>
-        <thead><tr><th>국적</th><th>비중</th></tr></thead>
-        <tbody>
-          {nat_rows_html}
-        </tbody>
+        <thead><tr><th>국적</th><th>비중</th><th>인당 객단가</th></tr></thead>
+        <tbody>{nat_rows_with_price_html}</tbody>
       </table>
     </div>
     <div class="card">
-      <h3>국적별 인당 객단가 TOP 5</h3>
+      <h3>주요 4개국 객단가 비교</h3>
       <div class="chart-container" style="height:200px;"><canvas id="priceChart"></canvas></div>
-      <div class="note">※ 고객 프리미엄 시술 선호도 지표</div>
+      <div class="note">※ 태국 · 대만 · 미국 · 중국 기준</div>
     </div>
   </div>
 </div>
@@ -473,7 +472,7 @@ tbody tr:hover{{background:#FFF8F5;}}
   <div class="kpi-grid">
     <div class="kpi accent"><div class="label">센터 방문객 수</div><div class="value">{실제방문자:,}</div><div class="sub">일평균 {일평균방문:.0f}명 방문</div></div>
     <div class="kpi"><div class="label">센터 방문 예약 수</div><div class="value">{예약고객수:,}</div><div class="sub">일평균 {일평균예약:.0f}건 예약</div></div>
-    <div class="kpi"><div class="label">방문 고객 국적</div><div class="value">3개</div><div class="sub">영어 · 중국어 · 태국어권</div></div>
+    <div class="kpi"><div class="label">센터 방문객 국적</div><div class="value">20+개국</div><div class="sub">글로벌 고객</div></div>
   </div>
   <div class="note">* 방문객 수는 예약 건 단위로 집계 (1건 = 1명 카운트). 함께 방문한 대기 고객은 트래킹 대상에서 제외.</div>
 </div>
@@ -533,10 +532,10 @@ tbody tr:hover{{background:#FFF8F5;}}
   <div class="section-desc">3월 시/수술 완료 고객 국적별 분포와 TOP 5 객단가 국적입니다.</div>
   <div class="row row-2">
     <div class="card">
-      <h3>국적별 고객 비중</h3>
+      <h3>국적별 고객 비중 · 객단가</h3>
       <table>
-        <thead><tr><th>국적</th><th>비중</th></tr></thead>
-        <tbody>{nat_rows_html}</tbody>
+        <thead><tr><th>국적</th><th>비중</th><th>인당 객단가</th></tr></thead>
+        <tbody>{nat_rows_with_price_html}</tbody>
       </table>
     </div>
     <div class="card">
