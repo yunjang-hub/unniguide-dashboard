@@ -527,58 +527,13 @@ prev_candidates = [m for m in all_months if m < latest_month] if latest_month el
 prev_month = prev_candidates[-1] if prev_candidates else None
 
 # ============================================================
-# Tab 1: Overview (A+C: 전체 고정 + 필터 반응)
+# Tab 1: Overview (필터 반응 단일 구조)
 # ============================================================
 with tab1:
     def pct_delta(cur, prev):
         return f"{(cur - prev) / max(prev, 1) * 100:+.1f}%" if prev > 0 else None
 
-    # ────────────────────────────────────────────
-    # 상단: 전체 서비스 성과 (필터 무관, 최신 정산월 기준)
-    # ────────────────────────────────────────────
-    settle_latest = all_months_settle[-1] if all_months_settle else None
-    settle_prev = all_months_settle[-2] if len(all_months_settle) >= 2 else None
-
-    if settle_latest and len(df_settle) > 0:
-        all_latest_set = df_settle[df_settle['정산월'] == settle_latest]
-        all_prev_set = df_settle[df_settle['정산월'] == settle_prev] if settle_prev else pd.DataFrame()
-
-        settle_latest_kr = f"{settle_latest.split('-')[0]}년 {int(settle_latest.split('-')[1])}월"
-        st.subheader(f"📊 {settle_latest_kr} 전체 서비스 성과")
-        st.caption("전체 언니가이드 서비스 기준 (필터 무관)")
-
-        ac1, ac2, ac3, ac4, ac5 = st.columns(5)
-        all_cnt = len(all_latest_set)
-        all_prev_cnt = len(all_prev_set)
-        all_rev = all_latest_set['시술금액'].sum()
-        all_prev_rev = all_prev_set['시술금액'].sum() if len(all_prev_set) > 0 else 0
-        all_comm = all_latest_set['수수료금액'].sum()
-        all_avg = all_rev / all_cnt if all_cnt > 0 else 0
-
-        ac1.metric("시/수술 완료", f"{all_cnt:,}건", pct_delta(all_cnt, all_prev_cnt))
-        ac2.metric("정산 매출", format_krw(all_rev), pct_delta(all_rev, all_prev_rev))
-        ac3.metric("수수료 매출", format_krw(all_comm))
-        ac4.metric("인당 객단가", format_krw(all_avg))
-        ac5.metric("참여 국적", f"{all_latest_set['국적'].nunique()}개국")
-
-        # 운영 현황 (최신월, 전체 기준)
-        if df_all is not None:
-            all_month_df = df_all[df_all['월'] == settle_latest]
-            if len(all_month_df) > 0:
-                oc1, oc2, oc3, oc4 = st.columns(4)
-                oc1.metric("전체 예약 접수", f"{len(all_month_df)}건")
-                completed_cnt = len(all_month_df[all_month_df['예약상태'] == '시/수술 완료'])
-                oc2.metric("시/수술 완료", f"{completed_cnt}건")
-                cancel_cnt = len(all_month_df[all_month_df['예약상태'] == '예약 취소'])
-                oc3.metric("예약 취소", f"{cancel_cnt}건")
-                noshow_cnt = len(all_month_df[all_month_df['예약상태'].str.lower().str.contains('no-show|no show|noshow', na=False)])
-                oc4.metric("No-show", f"{noshow_cnt}건")
-
-    st.divider()
-
-    # ────────────────────────────────────────────
-    # 하단: 필터 반응 성과 (선택 기간 · 국적 · 병원)
-    # ────────────────────────────────────────────
+    # 현재 필터 표시
     filter_desc_parts = []
     if month_range[0] != month_range[1]:
         filter_desc_parts.append(f"기간: {month_range[0]} ~ {month_range[1]}")
@@ -590,8 +545,8 @@ with tab1:
         filter_desc_parts.append(f"병원: {', '.join(selected_hospitals[:2])}{'...' if len(selected_hospitals) > 2 else ''}")
     filter_label = " · ".join(filter_desc_parts)
 
-    st.subheader("🔍 선택 기간 성과")
-    st.caption(f"현재 필터: {filter_label}")
+    st.subheader("📊 성과 Overview")
+    st.caption(f"{filter_label}")
 
     # 필터된 데이터 KPI
     f_cnt = len(filtered_set) if len(filtered_set) > 0 else len(filtered_res)
