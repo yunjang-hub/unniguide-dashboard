@@ -157,6 +157,7 @@ price_values = [int(r['객단가']) for _, r in focus_data.iterrows()]
 chart_data = json.dumps({
     'labels': chart_labels, 'booking': chart_booking, 'visit': chart_visit,
     'wk_labels': list(weekly.keys()),
+    'wk_visit': [v['방문'] for v in weekly.values()],
     'wk_cum_visit': [v['누적방문'] for v in weekly.values()],
     'nat_labels': [r['국적'] for _, r in nat_stats.head(6).iterrows()],
     'nat_counts': [int(r['건수']) for _, r in nat_stats.head(6).iterrows()],
@@ -278,7 +279,7 @@ td{{padding:5px 8px;text-align:center;border-bottom:1px solid #E9ECEF;}}
       </div>
     </div>
     <div class="card">
-      <h3>주간별 누적 센터 방문 추이</h3>
+      <h3>주간별 센터 방문 추이</h3>
       <div class="chart-container" style="height:240px;"><canvas id="weeklyChart"></canvas></div>
     </div>
   </div>
@@ -307,7 +308,7 @@ td{{padding:5px 8px;text-align:center;border-bottom:1px solid #E9ECEF;}}
       </table>
     </div>
     <div class="card">
-      <h3>주요 4개국 객단가 비교</h3>
+      <h3>주요 국적별 인당 객단가</h3>
       <div class="chart-container" style="height:200px;"><canvas id="priceChart"></canvas></div>
       <div class="note">※ 태국 · 대만 · 미국 · 중국 기준</div>
     </div>
@@ -339,11 +340,12 @@ td{{padding:5px 8px;text-align:center;border-bottom:1px solid #E9ECEF;}}
 const D = {chart_data};
 const C = ['#FF6A3B','#330C2E','#00B894','#FDCB6E','#0984E3','#E17055','#00CEC9','#A29BFE'];
 new Chart(document.getElementById('weeklyChart'),{{
-  type:'line',
+  type:'bar',
   data:{{labels:D.wk_labels,datasets:[
-    {{label:'누적 센터 방문객',data:D.wk_cum_visit,borderColor:'#FF6A3B',backgroundColor:'rgba(255,106,59,0.15)',borderWidth:3,pointRadius:6,pointBackgroundColor:'#FF6A3B',pointBorderColor:'#fff',pointBorderWidth:2,tension:0.3,fill:true}}
+    {{label:'주간 방문',data:D.wk_visit,backgroundColor:'#FF6A3B88',borderColor:'#FF6A3B',borderWidth:1,borderRadius:6,yAxisID:'y',order:2}},
+    {{label:'누적 방문',data:D.wk_cum_visit,type:'line',borderColor:'#330C2E',backgroundColor:'transparent',borderWidth:2.5,pointRadius:5,pointBackgroundColor:'#330C2E',pointBorderColor:'#fff',pointBorderWidth:2,tension:0.3,yAxisID:'y2',order:1}}
   ]}},
-  options:{{responsive:true,maintainAspectRatio:false,plugins:{{legend:{{display:false}},tooltip:{{callbacks:{{label:ctx=>'누적 '+ctx.parsed.y.toLocaleString()+'명'}}}}}},scales:{{x:{{grid:{{display:false}},ticks:{{font:{{size:11}}}}}},y:{{grid:{{color:'#F1F2F6'}},ticks:{{font:{{size:10}},callback:v=>v.toLocaleString()+'명'}},beginAtZero:true}}}}}}
+  options:{{responsive:true,maintainAspectRatio:false,plugins:{{legend:{{position:'bottom',labels:{{font:{{size:9}}}}}}}},scales:{{x:{{grid:{{display:false}},ticks:{{font:{{size:10}}}}}},y:{{position:'left',grid:{{color:'#F1F2F6'}},ticks:{{font:{{size:9}}}},beginAtZero:true}},y2:{{position:'right',grid:{{display:false}},ticks:{{font:{{size:9}}}},beginAtZero:true}}}}}}
 }});
 new Chart(document.getElementById('priceChart'),{{
   type:'bar',
@@ -509,7 +511,7 @@ tbody tr:hover{{background:#FFF8F5;}}
 
 <!-- 주간 추이 -->
 <div class="section" id="trend">
-  <div class="section-title">📈 주간별 누적 센터 방문 추이</div>
+  <div class="section-title">📈 주간별 센터 방문 추이</div>
   <div class="section-desc">센터 오픈 이후 누적 방문객 수 추이. 지속적인 우상향 확인.</div>
   <div class="card">
     <div class="chart-container" style="height:340px;"><canvas id="weeklyChartWeb"></canvas></div>
@@ -539,7 +541,7 @@ tbody tr:hover{{background:#FFF8F5;}}
       </table>
     </div>
     <div class="card">
-      <h3>국적별 인당 객단가 TOP 5</h3>
+      <h3>주요 국적별 인당 객단가</h3>
       <div class="chart-container" style="height:260px;"><canvas id="priceChartWeb"></canvas></div>
       <div class="note">※ 고객 프리미엄 시술 선호도 지표</div>
     </div>
@@ -578,11 +580,12 @@ const D = {chart_data};
 const C = ['#FF6A3B','#330C2E','#00B894','#FDCB6E','#0984E3','#E17055','#00CEC9','#A29BFE'];
 
 new Chart(document.getElementById('weeklyChartWeb'),{{
-  type:'line',
+  type:'bar',
   data:{{labels:D.wk_labels,datasets:[
-    {{label:'누적 센터 방문객',data:D.wk_cum_visit,borderColor:'#FF6A3B',backgroundColor:'rgba(255,106,59,0.18)',borderWidth:3,pointRadius:7,pointBackgroundColor:'#FF6A3B',pointBorderColor:'#fff',pointBorderWidth:3,tension:0.3,fill:true}}
+    {{label:'주간 방문',data:D.wk_visit,backgroundColor:'#FF6A3B88',borderColor:'#FF6A3B',borderWidth:1,borderRadius:8,yAxisID:'y',order:2}},
+    {{label:'누적 방문',data:D.wk_cum_visit,type:'line',borderColor:'#330C2E',backgroundColor:'transparent',borderWidth:3,pointRadius:7,pointBackgroundColor:'#330C2E',pointBorderColor:'#fff',pointBorderWidth:3,tension:0.3,yAxisID:'y2',order:1}}
   ]}},
-  options:{{responsive:true,maintainAspectRatio:false,plugins:{{legend:{{display:false}},tooltip:{{titleFont:{{size:14}},bodyFont:{{size:14}},padding:12,callbacks:{{label:ctx=>'누적 '+ctx.parsed.y.toLocaleString()+'명 방문'}}}}}},scales:{{x:{{grid:{{display:false}},ticks:{{font:{{size:13}}}}}},y:{{grid:{{color:'#F1F2F6'}},ticks:{{font:{{size:12}},callback:v=>v.toLocaleString()+'명'}},beginAtZero:true}}}}}}
+  options:{{responsive:true,maintainAspectRatio:false,plugins:{{legend:{{position:'bottom',labels:{{font:{{size:12}}}}}},tooltip:{{titleFont:{{size:14}},bodyFont:{{size:14}},padding:12}}}},scales:{{x:{{grid:{{display:false}},ticks:{{font:{{size:13}}}}}},y:{{position:'left',title:{{display:true,text:'주간 방문'}},grid:{{color:'#F1F2F6'}},ticks:{{font:{{size:11}}}},beginAtZero:true}},y2:{{position:'right',title:{{display:true,text:'누적 방문'}},grid:{{display:false}},ticks:{{font:{{size:11}}}},beginAtZero:true}}}}}}
 }});
 
 new Chart(document.getElementById('priceChartWeb'),{{
