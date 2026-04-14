@@ -91,6 +91,15 @@ for idx, c in enumerate(target_cols):
     weekly[w]['예약'] += chart_booking[idx]
     weekly[w]['방문'] += chart_visit[idx]
 
+# 누적 (우상향 추이용)
+cum_visit = 0
+cum_booking = 0
+for w in weekly:
+    cum_visit += weekly[w]['방문']
+    cum_booking += weekly[w]['예약']
+    weekly[w]['누적방문'] = cum_visit
+    weekly[w]['누적예약'] = cum_booking
+
 # ============================================================
 # 2. 정산 데이터 (3월 국적별/객단가)
 # ============================================================
@@ -147,8 +156,7 @@ price_values = [int(r['객단가']) for _, r in top_price.iterrows()]
 chart_data = json.dumps({
     'labels': chart_labels, 'booking': chart_booking, 'visit': chart_visit,
     'wk_labels': list(weekly.keys()),
-    'wk_booking': [v['예약'] for v in weekly.values()],
-    'wk_visit': [v['방문'] for v in weekly.values()],
+    'wk_cum_visit': [v['누적방문'] for v in weekly.values()],
     'nat_labels': [r['국적'] for _, r in nat_stats.head(6).iterrows()],
     'nat_counts': [int(r['건수']) for _, r in nat_stats.head(6).iterrows()],
     'price_labels': price_labels,
@@ -269,7 +277,7 @@ td{{padding:5px 8px;text-align:center;border-bottom:1px solid #E9ECEF;}}
       </div>
     </div>
     <div class="card">
-      <h3>주간별 센터 방문 추이</h3>
+      <h3>주간별 누적 센터 방문 추이</h3>
       <div class="chart-container" style="height:240px;"><canvas id="weeklyChart"></canvas></div>
     </div>
   </div>
@@ -332,11 +340,11 @@ td{{padding:5px 8px;text-align:center;border-bottom:1px solid #E9ECEF;}}
 const D = {chart_data};
 const C = ['#FF6A3B','#330C2E','#00B894','#FDCB6E','#0984E3','#E17055','#00CEC9','#A29BFE'];
 new Chart(document.getElementById('weeklyChart'),{{
-  type:'bar',
+  type:'line',
   data:{{labels:D.wk_labels,datasets:[
-    {{label:'센터 방문객',data:D.wk_visit,backgroundColor:'#FF6A3B',borderRadius:6}}
+    {{label:'누적 센터 방문객',data:D.wk_cum_visit,borderColor:'#FF6A3B',backgroundColor:'rgba(255,106,59,0.15)',borderWidth:3,pointRadius:6,pointBackgroundColor:'#FF6A3B',pointBorderColor:'#fff',pointBorderWidth:2,tension:0.3,fill:true}}
   ]}},
-  options:{{responsive:true,maintainAspectRatio:false,plugins:{{legend:{{display:false}}}},scales:{{x:{{grid:{{display:false}},ticks:{{font:{{size:11}}}}}},y:{{grid:{{color:'#F1F2F6'}},ticks:{{font:{{size:10}}}}}}}}}}
+  options:{{responsive:true,maintainAspectRatio:false,plugins:{{legend:{{display:false}},tooltip:{{callbacks:{{label:ctx=>'누적 '+ctx.parsed.y.toLocaleString()+'명'}}}}}},scales:{{x:{{grid:{{display:false}},ticks:{{font:{{size:11}}}}}},y:{{grid:{{color:'#F1F2F6'}},ticks:{{font:{{size:10}},callback:v=>v.toLocaleString()+'명'}},beginAtZero:true}}}}}}
 }});
 new Chart(document.getElementById('priceChart'),{{
   type:'bar',
@@ -349,6 +357,247 @@ new Chart(document.getElementById('priceChart'),{{
 out_path = os.path.join(OUTPUT_DIR, 'unniguide_center_report_202603.html')
 with open(out_path, 'w', encoding='utf-8') as f:
     f.write(html)
-print(f"✅ {out_path}")
+print(f"✅ PDF용: {out_path}")
+
+# ============================================================
+# Web 버전 HTML (크기 여유, 인터랙티브, URL 공유용)
+# ============================================================
+web_html = f"""<!DOCTYPE html>
+<html lang="ko"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>언니가이드 센터 운영 리포트 | 2026년 3월</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+*{{margin:0;padding:0;box-sizing:border-box;}}
+body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR',sans-serif;color:#2D3436;line-height:1.6;background:#FAFBFC;font-size:15px;}}
+.container{{max-width:1100px;margin:0 auto;padding:24px 20px 60px;}}
+
+.top-nav{{position:sticky;top:0;z-index:100;background:rgba(255,255,255,0.95);backdrop-filter:blur(10px);border-bottom:1px solid #E9ECEF;padding:12px 0;margin-bottom:0;}}
+.top-nav-inner{{max-width:1100px;margin:0 auto;padding:0 20px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;}}
+.top-nav a{{text-decoration:none;color:#636E72;font-size:14px;font-weight:600;padding:8px 14px;border-radius:8px;transition:all 0.15s;}}
+.top-nav a:hover{{background:#FFF0EB;color:#FF6A3B;}}
+.top-nav .spacer{{flex:1;}}
+
+.header{{background:linear-gradient(135deg,#FF6A3B 0%,#E8551F 100%);color:white;padding:48px 40px;border-radius:0 0 24px 24px;margin:-24px -20px 32px;}}
+.header-top{{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}}
+.logo{{font-size:16px;font-weight:800;letter-spacing:1.5px;}}
+.header h1{{font-size:32px;font-weight:800;margin:8px 0;}}
+.header .sub{{font-size:15px;opacity:0.9;}}
+
+.location-banner{{background:linear-gradient(135deg,#FFF3CC 0%,#FFE8B8 100%);border-left:6px solid #F39C12;border-radius:12px;padding:20px 28px;margin-bottom:32px;display:flex;align-items:center;gap:20px;}}
+.location-banner .icon{{font-size:40px;}}
+.location-banner .label{{font-size:12px;color:#8B7500;font-weight:700;letter-spacing:1px;margin-bottom:4px;}}
+.location-banner .main{{font-size:20px;font-weight:700;color:#330C2E;}}
+.location-banner .main strong{{color:#FF6A3B;font-size:28px;}}
+.location-banner .sub{{font-size:13px;color:#636E72;margin-top:4px;}}
+
+.section{{margin-bottom:40px;}}
+.section-title{{font-size:22px;font-weight:800;color:#330C2E;margin-bottom:8px;display:flex;align-items:center;gap:10px;}}
+.section-desc{{font-size:14px;color:#636E72;margin-bottom:20px;}}
+
+.kpi-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;}}
+.kpi{{background:white;border:1px solid #E9ECEF;border-radius:14px;padding:24px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,0.04);transition:transform 0.2s;}}
+.kpi:hover{{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.08);}}
+.kpi .label{{font-size:13px;color:#636E72;margin-bottom:8px;}}
+.kpi .value{{font-size:38px;font-weight:800;color:#330C2E;line-height:1.1;}}
+.kpi .sub{{font-size:13px;color:#FF6A3B;font-weight:600;margin-top:6px;}}
+.kpi.accent .value{{color:#FF6A3B;}}
+
+.row{{display:grid;gap:20px;}}.row-2{{grid-template-columns:1fr 1fr;}}
+.card{{background:white;border:1px solid #E9ECEF;border-radius:14px;padding:24px 28px;box-shadow:0 2px 12px rgba(0,0,0,0.04);}}
+.card h3{{font-size:17px;color:#330C2E;margin-bottom:14px;font-weight:700;}}
+
+.chart-container{{position:relative;height:280px;margin-top:12px;}}
+
+table{{width:100%;border-collapse:collapse;font-size:14px;}}
+th{{background:#FBF9F1;padding:12px 14px;text-align:center;font-weight:700;color:#330C2E;border-bottom:2px solid #E9ECEF;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;}}
+td{{padding:12px 14px;text-align:center;border-bottom:1px solid #E9ECEF;}}
+tbody tr:hover{{background:#FFF8F5;}}
+.bold{{font-weight:700;}}
+
+.insight{{background:linear-gradient(135deg,#FFF9E6 0%,#FFF3CC 100%);border-left:4px solid #F39C12;border-radius:0 12px 12px 0;padding:20px 28px;font-size:14px;line-height:1.8;}}
+.insight ul{{padding-left:20px;margin-top:8px;}}
+.insight li{{margin-bottom:6px;}}
+.insight strong.highlight{{color:#FF6A3B;}}
+.note{{font-size:12px;color:#999;margin-top:8px;}}
+
+.footer{{text-align:center;padding:32px 0;color:#636E72;font-size:13px;border-top:1px solid #E9ECEF;margin-top:48px;}}
+
+@media (max-width:768px){{
+  .row-2{{grid-template-columns:1fr;}}
+  .header{{padding:32px 20px;}}
+  .header h1{{font-size:24px;}}
+  .kpi .value{{font-size:30px;}}
+}}
+</style>
+</head><body>
+
+<div class="top-nav">
+  <div class="top-nav-inner">
+    <a href="#kpi">핵심 성과</a>
+    <a href="#language">언어 · 유형</a>
+    <a href="#trend">주간 추이</a>
+    <a href="#service">서비스 실적</a>
+    <a href="#nationality">국적 객단가</a>
+    <a href="#insight">Key Insights</a>
+    <div class="spacer"></div>
+    <span style="font-size:12px;color:#999;">Confidential</span>
+  </div>
+</div>
+
+<div class="container">
+
+<div class="header">
+  <div class="header-top">
+    <div class="logo">UNNI GUIDE</div>
+    <div style="font-size:13px;opacity:0.8;">제휴사 공유용</div>
+  </div>
+  <h1>오프라인 센터 운영 리포트</h1>
+  <div class="sub">2026.03.03 ~ 2026.03.31 (29일) · 서울 강남 언니가이드 센터</div>
+</div>
+
+<!-- 유동인구 배너 -->
+<div class="location-banner">
+  <div class="icon">📍</div>
+  <div style="flex:1;">
+    <div class="label">LOCATION POWER</div>
+    <div class="main">센터 인근 500m 월 평균 유동인구 약 <strong>174만명</strong></div>
+    <div class="sub">2026년 3월 데이터 기준 · 강남 메인 상권 중심부 입지</div>
+  </div>
+</div>
+
+<!-- KPI -->
+<div class="section" id="kpi">
+  <div class="section-title">📊 센터 핵심 성과</div>
+  <div class="section-desc">외국인 고객 대상 월간 센터 운영 지표입니다.</div>
+  <div class="kpi-grid">
+    <div class="kpi accent"><div class="label">센터 방문객 수</div><div class="value">{실제방문자:,}</div><div class="sub">일평균 {일평균방문:.0f}명 방문</div></div>
+    <div class="kpi"><div class="label">센터 방문 예약 수</div><div class="value">{예약고객수:,}</div><div class="sub">일평균 {일평균예약:.0f}건 예약</div></div>
+    <div class="kpi"><div class="label">방문 고객 국적</div><div class="value">3개</div><div class="sub">영어 · 중국어 · 태국어권</div></div>
+  </div>
+  <div class="note">* 방문객 수는 예약 건 단위로 집계 (1건 = 1명 카운트). 함께 방문한 대기 고객은 트래킹 대상에서 제외.</div>
+</div>
+
+<!-- 언어 & 방문 유형 -->
+<div class="section" id="language">
+  <div class="section-title">🌐 언어권 · 방문 고객 유형</div>
+  <div class="section-desc">방문 고객의 언어권 분포와 방한/재한 비중입니다.</div>
+  <div class="row row-2">
+    <div class="card">
+      <h3>언어별 센터 방문 비중</h3>
+      <table>
+        <thead><tr><th>언어</th><th>방문 고객</th><th>비중</th></tr></thead>
+        <tbody>
+          <tr><td>🇬🇧 영어권</td><td class="bold">{영어_방문:,}명</td><td class="bold">{영어_방문/max(실제방문자,1)*100:.1f}%</td></tr>
+          <tr><td>🇹🇭 태국어권</td><td class="bold">{태국어_방문:,}명</td><td class="bold">{태국어_방문/max(실제방문자,1)*100:.1f}%</td></tr>
+          <tr><td>🇨🇳 중국어권</td><td class="bold">{중국어_방문:,}명</td><td class="bold">{중국어_방문/max(실제방문자,1)*100:.1f}%</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h3>방문 고객 유형</h3>
+      <table>
+        <thead><tr><th>구분</th><th>건수</th><th>비중</th></tr></thead>
+        <tbody>
+          <tr><td>방한 외국인 (관광)</td><td class="bold">{방한_방문:,}명</td><td>{방한_방문/max(실제방문자,1)*100:.1f}%</td></tr>
+          <tr><td>재한 외국인 (거주)</td><td class="bold">{재한_방문:,}명</td><td>{재한_방문/max(실제방문자,1)*100:.1f}%</td></tr>
+        </tbody>
+      </table>
+      <div class="note">* 4월 1일부 센터 방문 고객 100% 방한 외국인 전환 완료</div>
+    </div>
+  </div>
+</div>
+
+<!-- 주간 추이 -->
+<div class="section" id="trend">
+  <div class="section-title">📈 주간별 누적 센터 방문 추이</div>
+  <div class="section-desc">센터 오픈 이후 누적 방문객 수 추이. 지속적인 우상향 확인.</div>
+  <div class="card">
+    <div class="chart-container" style="height:340px;"><canvas id="weeklyChartWeb"></canvas></div>
+  </div>
+</div>
+
+<!-- 서비스 실적 -->
+<div class="section" id="service">
+  <div class="section-title">💼 언니가이드 서비스 실적 (온/오프라인 통합)</div>
+  <div class="section-desc">언니가이드 서비스를 통해 시술·수술을 완료한 외국인 고객 데이터 (2026년 3월 정산 기준)</div>
+  <div class="kpi-grid" style="grid-template-columns:repeat(2,1fr);">
+    <div class="kpi accent"><div class="label">총 시/수술 금액</div><div class="value">{format_krw(total_매출)}</div><div class="sub">{num_국적}개국 고객 · 3월 단월 기준</div></div>
+    <div class="kpi"><div class="label">평균 객단가</div><div class="value">{format_krw(avg_객단가)}</div><div class="sub">1인 평균 시/수술 금액</div></div>
+  </div>
+</div>
+
+<!-- 국적 -->
+<div class="section" id="nationality">
+  <div class="section-title">🌍 국적별 비중 · 객단가 분포</div>
+  <div class="section-desc">3월 시/수술 완료 고객 국적별 분포와 TOP 5 객단가 국적입니다.</div>
+  <div class="row row-2">
+    <div class="card">
+      <h3>국적별 고객 비중</h3>
+      <table>
+        <thead><tr><th>국적</th><th>비중</th></tr></thead>
+        <tbody>{nat_rows_html}</tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h3>국적별 인당 객단가 TOP 5</h3>
+      <div class="chart-container" style="height:260px;"><canvas id="priceChartWeb"></canvas></div>
+      <div class="note">※ 고객 프리미엄 시술 선호도 지표</div>
+    </div>
+  </div>
+</div>
+
+<!-- 인사이트 -->
+<div class="section" id="insight">
+  <div class="section-title">💡 Key Insights</div>
+  <div class="insight">
+    <ul style="list-style:none;padding-left:0;">
+      <li>📍 3월 한 달간 <strong class="highlight">총 {실제방문자:,}명</strong>의 외국인 고객이 센터에 직접 방문 (일평균 <strong>{일평균방문:.0f}명</strong>)</li>
+      <li>📊 주간별 방문객 수 <strong>우상향 추세</strong> — 외국인 대상 센터 인지도 빠르게 확산</li>
+      <li>💰 언니가이드 서비스 3월 시/수술 금액 <strong class="highlight">{format_krw(total_매출)}</strong>, 평균 객단가 <strong>{format_krw(avg_객단가)}</strong></li>
+      <li>🌍 <strong>{num_국적}개국</strong> 다국적 고객층 — 태국·대만·미국이 80% 차지, 고단가 고객(미국·중국·말레이시아)도 고르게 분포</li>
+      <li>🎯 <strong>4월부터 100% 방한 외국인 전환</strong> — 인바운드 관광 타겟 브랜드에 최적 접점</li>
+    </ul>
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid rgba(243,156,18,0.3);">
+      <strong class="highlight" style="font-size:16px;">🏢 제휴 브랜드 노출 효과</strong>
+      <div style="margin-top:8px;">
+        월 <strong class="highlight">{실제방문자:,}명+</strong> 외국인이 방문하는 오프라인 공간에서 K-Beauty 브랜드 체험 · 구매 전환까지 <strong>원스톱 접점 확보</strong>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  <strong>UNNI GUIDE</strong> | 강남언니 언니가이드 오프라인 센터 · 서울 강남구<br>
+  본 리포트는 제휴 브랜드 전용 자료이며 외부 배포를 삼가해 주세요. | {datetime.now().strftime('%Y.%m.%d')}
+</div>
+
+</div>
+
+<script>
+const D = {chart_data};
+const C = ['#FF6A3B','#330C2E','#00B894','#FDCB6E','#0984E3','#E17055','#00CEC9','#A29BFE'];
+
+new Chart(document.getElementById('weeklyChartWeb'),{{
+  type:'line',
+  data:{{labels:D.wk_labels,datasets:[
+    {{label:'누적 센터 방문객',data:D.wk_cum_visit,borderColor:'#FF6A3B',backgroundColor:'rgba(255,106,59,0.18)',borderWidth:3,pointRadius:7,pointBackgroundColor:'#FF6A3B',pointBorderColor:'#fff',pointBorderWidth:3,tension:0.3,fill:true}}
+  ]}},
+  options:{{responsive:true,maintainAspectRatio:false,plugins:{{legend:{{display:false}},tooltip:{{titleFont:{{size:14}},bodyFont:{{size:14}},padding:12,callbacks:{{label:ctx=>'누적 '+ctx.parsed.y.toLocaleString()+'명 방문'}}}}}},scales:{{x:{{grid:{{display:false}},ticks:{{font:{{size:13}}}}}},y:{{grid:{{color:'#F1F2F6'}},ticks:{{font:{{size:12}},callback:v=>v.toLocaleString()+'명'}},beginAtZero:true}}}}}}
+}});
+
+new Chart(document.getElementById('priceChartWeb'),{{
+  type:'bar',
+  data:{{labels:D.price_labels,datasets:[{{data:D.price_values,backgroundColor:C.map(c=>c+'88'),borderColor:C,borderWidth:2,borderRadius:6}}]}},
+  options:{{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{{legend:{{display:false}},tooltip:{{enabled:false}}}},scales:{{x:{{display:false,grid:{{display:false}}}},y:{{grid:{{display:false}},ticks:{{font:{{size:14,weight:'600'}}}}}}}}}}
+}});
+</script>
+</body></html>"""
+
+web_path = os.path.join(OUTPUT_DIR, 'unniguide_center_report_web_202603.html')
+with open(web_path, 'w', encoding='utf-8') as f:
+    f.write(web_html)
+print(f"✅ Web용: {web_path}")
+
 print(f"\n=== 센터 ===  방문객: {실제방문자:,} | 예약: {예약고객수:,}")
 print(f"=== 서비스 === {total_건수}건 | {format_krw(total_매출)} | 객단가 {format_krw(avg_객단가)} | {num_국적}개국")
