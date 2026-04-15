@@ -210,7 +210,7 @@ for i, (c, v) in enumerate(cat_rank, 1):
     <div style="margin-bottom:10px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
         <div style="font-size:13px;font-weight:700;color:#330C2E;">{i}. {emoji} {c}</div>
-        <div style="font-size:12px;color:#636E72;"><strong style="color:#FF6A3B;">{v}명</strong> · {pct:.1f}%</div>
+        <div style="font-size:12px;color:#636E72;"><strong style="color:#FF6A3B;">{pct:.1f}%</strong></div>
       </div>
       <div style="height:8px;background:#F1F2F6;border-radius:4px;overflow:hidden;">
         <div style="height:100%;width:{bar_width}%;background:linear-gradient(90deg,#FF6A3B,#E8551F);border-radius:4px;"></div>
@@ -380,7 +380,7 @@ td{{padding:5px 8px;text-align:center;border-bottom:1px solid #E9ECEF;}}
 <div class="section">
   <div class="card">
     <h3>3월 인기 시술 카테고리 TOP 5</h3>
-    <div class="note" style="margin-bottom:10px;">언니가이드 서비스 3월 시/수술 완료 고객 {_total_cust}명 기준 (중복 포함)</div>
+    <div class="note" style="margin-bottom:10px;">언니가이드 서비스 3월 시/수술 완료 고객 기준 (중복 포함)</div>
     {cat_rows_html}
   </div>
 </div>
@@ -621,7 +621,7 @@ tbody tr:hover{{background:#FFF8F5;}}
 <!-- 인기 시술 카테고리 -->
 <div class="section" id="categories">
   <div class="section-title">🔥 3월 인기 시술 카테고리 TOP 5</div>
-  <div class="section-desc">언니가이드 서비스 3월 시/수술 완료 고객 {_total_cust}명 기준 (중복 포함)</div>
+  <div class="section-desc">언니가이드 서비스 3월 시/수술 완료 고객 기준 (중복 포함)</div>
   <div class="card">
     {cat_rows_html}
   </div>
