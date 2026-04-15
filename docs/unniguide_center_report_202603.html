@@ -171,20 +171,19 @@ td{padding:5px 8px;text-align:center;border-bottom:1px solid #E9ECEF;}
 
 <div class="footer">
   <p><strong>UNNI GUIDE</strong> | 강남언니 언니가이드 오프라인 센터 · 서울 강남구</p>
-  <p>본 리포트는 제휴 브랜드 전용 자료이며 외부 배포를 삼가해 주세요. | 2026.04.14</p>
+  <p>본 리포트는 제휴 브랜드 전용 자료이며 외부 배포를 삼가해 주세요. | 2026.04.15</p>
 </div>
 
 </div>
 <script>
-const D = {"labels": ["03-03", "03-04", "03-05", "03-06", "03-07", "03-08", "03-09", "03-10", "03-11", "03-12", "03-13", "03-14", "03-15", "03-16", "03-17", "03-18", "03-19", "03-20", "03-21", "03-22", "03-23", "03-24", "03-25", "03-26", "03-27", "03-28", "03-29", "03-30", "03-31"], "booking": [19, 23, 15, 23, 56, 34, 32, 32, 31, 52, 22, 22, 7, 19, 32, 22, 33, 53, 62, 66, 77, 49, 33, 47, 30, 31, 31, 37, 21], "visit": [9, 11, 10, 11, 17, 0, 25, 21, 19, 19, 35, 19, 0, 35, 27, 29, 17, 37, 28, 0, 33, 33, 29, 28, 47, 29, 0, 61, 49], "wk_labels": ["W10", "W11", "W12", "W13", "W14"], "wk_visit": [58, 138, 173, 199, 110], "wk_cum_visit": [58, 196, 369, 568, 678], "nat_labels": ["태국", "대만", "미국", "중국", "몽골", "싱가포르"], "nat_counts": [69, 31, 30, 8, 4, 4], "price_labels": ["🇨🇳 중국", "🇺🇸 미국", "🇹🇼 대만", "🇹🇭 태국"], "price_values": [2345000, 2119733, 1372121, 970671]};
+const D = {"labels": ["03-03", "03-04", "03-05", "03-06", "03-07", "03-08", "03-09", "03-10", "03-11", "03-12", "03-13", "03-14", "03-15", "03-16", "03-17", "03-18", "03-19", "03-20", "03-21", "03-22", "03-23", "03-24", "03-25", "03-26", "03-27", "03-28", "03-29", "03-30", "03-31"], "booking": [19, 23, 15, 23, 56, 34, 32, 32, 31, 52, 22, 22, 7, 19, 32, 22, 33, 53, 62, 66, 77, 49, 33, 47, 30, 31, 31, 37, 21], "visit": [9, 11, 10, 11, 17, 0, 25, 21, 19, 19, 35, 19, 0, 35, 27, 29, 17, 37, 28, 0, 33, 33, 29, 28, 47, 29, 0, 61, 49], "wk_labels": ["W10", "W11", "W12", "W13"], "wk_visit": [58, 138, 173, 199], "nat_labels": ["태국", "대만", "미국", "중국", "몽골", "싱가포르"], "nat_counts": [69, 31, 30, 8, 4, 4], "price_labels": ["🇨🇳 중국", "🇺🇸 미국", "🇹🇼 대만", "🇹🇭 태국"], "price_values": [2345000, 2119733, 1372121, 970671]};
 const C = ['#FF6A3B','#330C2E','#00B894','#FDCB6E','#0984E3','#E17055','#00CEC9','#A29BFE'];
 new Chart(document.getElementById('weeklyChart'),{
   type:'bar',
   data:{labels:D.wk_labels,datasets:[
-    {label:'주간 방문',data:D.wk_visit,backgroundColor:'#FF6A3B88',borderColor:'#FF6A3B',borderWidth:1,borderRadius:6,yAxisID:'y',order:2},
-    {label:'누적 방문',data:D.wk_cum_visit,type:'line',borderColor:'#330C2E',backgroundColor:'transparent',borderWidth:2.5,pointRadius:5,pointBackgroundColor:'#330C2E',pointBorderColor:'#fff',pointBorderWidth:2,tension:0.3,yAxisID:'y2',order:1}
+    {data:D.wk_visit,backgroundColor:'#FF6A3B',borderRadius:6}
   ]},
-  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:9}}}},scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{position:'left',grid:{color:'#F1F2F6'},ticks:{font:{size:9}},beginAtZero:true},y2:{position:'right',grid:{display:false},ticks:{font:{size:9}},beginAtZero:true}}}
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{size:11}}},y:{grid:{color:'#F1F2F6'},ticks:{font:{size:10}},beginAtZero:true}}}
 });
 new Chart(document.getElementById('priceChart'),{
   type:'bar',

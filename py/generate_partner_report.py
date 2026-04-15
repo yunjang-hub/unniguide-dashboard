@@ -156,9 +156,8 @@ price_values = [int(r['객단가']) for _, r in focus_data.iterrows()]
 
 chart_data = json.dumps({
     'labels': chart_labels, 'booking': chart_booking, 'visit': chart_visit,
-    'wk_labels': list(weekly.keys()),
-    'wk_visit': [v['방문'] for v in weekly.values()],
-    'wk_cum_visit': [v['누적방문'] for v in weekly.values()],
+    'wk_labels': list(weekly.keys())[:-1],
+    'wk_visit': [v['방문'] for v in weekly.values()][:-1],
     'nat_labels': [r['국적'] for _, r in nat_stats.head(6).iterrows()],
     'nat_counts': [int(r['건수']) for _, r in nat_stats.head(6).iterrows()],
     'price_labels': price_labels,
@@ -342,10 +341,9 @@ const C = ['#FF6A3B','#330C2E','#00B894','#FDCB6E','#0984E3','#E17055','#00CEC9'
 new Chart(document.getElementById('weeklyChart'),{{
   type:'bar',
   data:{{labels:D.wk_labels,datasets:[
-    {{label:'주간 방문',data:D.wk_visit,backgroundColor:'#FF6A3B88',borderColor:'#FF6A3B',borderWidth:1,borderRadius:6,yAxisID:'y',order:2}},
-    {{label:'누적 방문',data:D.wk_cum_visit,type:'line',borderColor:'#330C2E',backgroundColor:'transparent',borderWidth:2.5,pointRadius:5,pointBackgroundColor:'#330C2E',pointBorderColor:'#fff',pointBorderWidth:2,tension:0.3,yAxisID:'y2',order:1}}
+    {{data:D.wk_visit,backgroundColor:'#FF6A3B',borderRadius:6}}
   ]}},
-  options:{{responsive:true,maintainAspectRatio:false,plugins:{{legend:{{position:'bottom',labels:{{font:{{size:9}}}}}}}},scales:{{x:{{grid:{{display:false}},ticks:{{font:{{size:10}}}}}},y:{{position:'left',grid:{{color:'#F1F2F6'}},ticks:{{font:{{size:9}}}},beginAtZero:true}},y2:{{position:'right',grid:{{display:false}},ticks:{{font:{{size:9}}}},beginAtZero:true}}}}}}
+  options:{{responsive:true,maintainAspectRatio:false,plugins:{{legend:{{display:false}}}},scales:{{x:{{grid:{{display:false}},ticks:{{font:{{size:11}}}}}},y:{{grid:{{color:'#F1F2F6'}},ticks:{{font:{{size:10}}}},beginAtZero:true}}}}}}
 }});
 new Chart(document.getElementById('priceChart'),{{
   type:'bar',
@@ -582,10 +580,9 @@ const C = ['#FF6A3B','#330C2E','#00B894','#FDCB6E','#0984E3','#E17055','#00CEC9'
 new Chart(document.getElementById('weeklyChartWeb'),{{
   type:'bar',
   data:{{labels:D.wk_labels,datasets:[
-    {{label:'주간 방문',data:D.wk_visit,backgroundColor:'#FF6A3B88',borderColor:'#FF6A3B',borderWidth:1,borderRadius:8,yAxisID:'y',order:2}},
-    {{label:'누적 방문',data:D.wk_cum_visit,type:'line',borderColor:'#330C2E',backgroundColor:'transparent',borderWidth:3,pointRadius:7,pointBackgroundColor:'#330C2E',pointBorderColor:'#fff',pointBorderWidth:3,tension:0.3,yAxisID:'y2',order:1}}
+    {{data:D.wk_visit,backgroundColor:'#FF6A3B',borderRadius:8}}
   ]}},
-  options:{{responsive:true,maintainAspectRatio:false,plugins:{{legend:{{position:'bottom',labels:{{font:{{size:12}}}}}},tooltip:{{titleFont:{{size:14}},bodyFont:{{size:14}},padding:12}}}},scales:{{x:{{grid:{{display:false}},ticks:{{font:{{size:13}}}}}},y:{{position:'left',title:{{display:true,text:'주간 방문'}},grid:{{color:'#F1F2F6'}},ticks:{{font:{{size:11}}}},beginAtZero:true}},y2:{{position:'right',title:{{display:true,text:'누적 방문'}},grid:{{display:false}},ticks:{{font:{{size:11}}}},beginAtZero:true}}}}}}
+  options:{{responsive:true,maintainAspectRatio:false,plugins:{{legend:{{display:false}},tooltip:{{titleFont:{{size:14}},bodyFont:{{size:14}},padding:12}}}},scales:{{x:{{grid:{{display:false}},ticks:{{font:{{size:13}}}}}},y:{{grid:{{color:'#F1F2F6'}},ticks:{{font:{{size:12}}}},beginAtZero:true}}}}}}
 }});
 
 new Chart(document.getElementById('priceChartWeb'),{{
