@@ -32,7 +32,7 @@ else:
         print("   사용법: python3 generate_report.py [엑셀파일경로]")
         sys.exit(1)
 
-OUTPUT_DIR = os.path.expanduser('~/Documents/unniguide-report')
+OUTPUT_DIR = os.path.expanduser('~/Documents/Unniguide/unniguide-report')
 HOSPITAL_DIR = os.path.join(OUTPUT_DIR, 'hospitals')
 
 # REPORT_MONTH: 인자로 받거나, 데이터에서 자동 감지 (아래에서 설정)

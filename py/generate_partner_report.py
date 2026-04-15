@@ -10,7 +10,7 @@ from datetime import datetime
 
 CSV_PATH = os.path.expanduser("~/Downloads/언니가이드_운영의 사본 - Offline - Daily (외국인).csv")
 EXCEL_PATH = os.path.expanduser("~/Downloads/언니가이드 운영 트렌드 데이터_26.04.xlsx")
-OUTPUT_DIR = os.path.expanduser("~/Documents/unniguide-report")
+OUTPUT_DIR = os.path.expanduser("~/Documents/Unniguide/unniguide-report")
 
 NAME_NORMALIZE = {
     '사적인아름다운지유의원': '사적인아름다움지유의원', '루호성형외과': '루호성형외과의원',

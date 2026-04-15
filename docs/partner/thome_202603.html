@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ko"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>언니가이드 센터 운영 리포트 | 2026년 3월</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR',sans-serif;color:#2D3436;line-height:1.6;background:#FAFBFC;font-size:15px;}
+.container{max-width:1100px;margin:0 auto;padding:24px 20px 60px;}
+
+.top-nav{position:sticky;top:0;z-index:100;background:rgba(255,255,255,0.95);backdrop-filter:blur(10px);border-bottom:1px solid #E9ECEF;padding:12px 0;margin-bottom:0;}
+.top-nav-inner{max-width:1100px;margin:0 auto;padding:0 20px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;}
+.top-nav a{text-decoration:none;color:#636E72;font-size:14px;font-weight:600;padding:8px 14px;border-radius:8px;transition:all 0.15s;}
+.top-nav a:hover{background:#FFF0EB;color:#FF6A3B;}
+.top-nav .spacer{flex:1;}
+
+.header{background:linear-gradient(135deg,#FF6A3B 0%,#E8551F 100%);color:white;padding:48px 40px;border-radius:0 0 24px 24px;margin:-24px -20px 32px;}
+.header-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.logo{font-size:16px;font-weight:800;letter-spacing:1.5px;}
+.header h1{font-size:32px;font-weight:800;margin:8px 0;}
+.header .sub{font-size:15px;opacity:0.9;}
+
+.location-banner{background:linear-gradient(135deg,#FFF3CC 0%,#FFE8B8 100%);border-left:6px solid #F39C12;border-radius:12px;padding:20px 28px;margin-bottom:32px;display:flex;align-items:center;gap:20px;}
+.location-banner .icon{font-size:40px;}
+.location-banner .label{font-size:12px;color:#8B7500;font-weight:700;letter-spacing:1px;margin-bottom:4px;}
+.location-banner .main{font-size:20px;font-weight:700;color:#330C2E;}
+.location-banner .main strong{color:#FF6A3B;font-size:28px;}
+.location-banner .sub{font-size:13px;color:#636E72;margin-top:4px;}
+
+.section{margin-bottom:40px;}
+.section-title{font-size:22px;font-weight:800;color:#330C2E;margin-bottom:8px;display:flex;align-items:center;gap:10px;}
+.section-desc{font-size:14px;color:#636E72;margin-bottom:20px;}
+
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;}
+.kpi{background:white;border:1px solid #E9ECEF;border-radius:14px;padding:24px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,0.04);transition:transform 0.2s;}
+.kpi:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.08);}
+.kpi .label{font-size:13px;color:#636E72;margin-bottom:8px;}
+.kpi .value{font-size:38px;font-weight:800;color:#330C2E;line-height:1.1;}
+.kpi .sub{font-size:13px;color:#FF6A3B;font-weight:600;margin-top:6px;}
+.kpi.accent .value{color:#FF6A3B;}
+
+.row{display:grid;gap:20px;}.row-2{grid-template-columns:1fr 1fr;}
+.card{background:white;border:1px solid #E9ECEF;border-radius:14px;padding:24px 28px;box-shadow:0 2px 12px rgba(0,0,0,0.04);}
+.card h3{font-size:17px;color:#330C2E;margin-bottom:14px;font-weight:700;}
+
+.chart-container{position:relative;height:280px;margin-top:12px;}
+
+table{width:100%;border-collapse:collapse;font-size:14px;}
+th{background:#FBF9F1;padding:12px 14px;text-align:center;font-weight:700;color:#330C2E;border-bottom:2px solid #E9ECEF;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;}
+td{padding:12px 14px;text-align:center;border-bottom:1px solid #E9ECEF;}
+tbody tr:hover{background:#FFF8F5;}
+.bold{font-weight:700;}
+
+.insight{background:linear-gradient(135deg,#FFF9E6 0%,#FFF3CC 100%);border-left:4px solid #F39C12;border-radius:0 12px 12px 0;padding:20px 28px;font-size:14px;line-height:1.8;}
+.insight ul{padding-left:20px;margin-top:8px;}
+.insight li{margin-bottom:6px;}
+.insight strong.highlight{color:#FF6A3B;}
+.note{font-size:12px;color:#999;margin-top:8px;}
+
+.footer{text-align:center;padding:32px 0;color:#636E72;font-size:13px;border-top:1px solid #E9ECEF;margin-top:48px;}
+
+@media (max-width:768px){
+  .row-2{grid-template-columns:1fr;}
+  .header{padding:32px 20px;}
+  .header h1{font-size:24px;}
+  .kpi .value{font-size:30px;}
+}
+</style>
+
+<style>
+#pw-gate {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(135deg, #330C2E 0%, #5C2D54 100%);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 99999; font-family: -apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR',sans-serif;
+}
+#pw-gate-box {
+  background: white; border-radius: 20px; padding: 48px 40px;
+  max-width: 440px; width: 90%; text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+#pw-gate-box .logo { font-size: 14px; font-weight: 800; letter-spacing: 2px; color: #FF6A3B; margin-bottom: 12px; }
+#pw-gate-box h1 { font-size: 22px; font-weight: 800; color: #330C2E; margin-bottom: 8px; }
+#pw-gate-box .subtitle { font-size: 14px; color: #636E72; margin-bottom: 8px; }
+#pw-gate-box .partner-label { font-size: 13px; color: #FF6A3B; font-weight: 700; margin-bottom: 28px; padding: 6px 14px; background: #FFF0EB; border-radius: 20px; display: inline-block; }
+#pw-gate-box .lock { font-size: 40px; margin-bottom: 16px; }
+#pw-gate-box input {
+  width: 100%; padding: 14px 18px; font-size: 16px;
+  border: 2px solid #E9ECEF; border-radius: 12px;
+  outline: none; transition: border 0.15s; margin-bottom: 12px;
+  text-align: center; letter-spacing: 2px;
+}
+#pw-gate-box input:focus { border-color: #FF6A3B; }
+#pw-gate-box button {
+  width: 100%; padding: 14px; font-size: 15px; font-weight: 700;
+  background: #FF6A3B; color: white; border: none; border-radius: 12px;
+  cursor: pointer; transition: background 0.15s;
+}
+#pw-gate-box button:hover { background: #E8551F; }
+#pw-gate-box .error { color: #E74C3C; font-size: 13px; margin-top: 10px; min-height: 18px; }
+#pw-gate-box .hint { font-size: 12px; color: #999; margin-top: 20px; }
+body.pw-locked { overflow: hidden; }
+body.pw-locked > *:not(#pw-gate) { filter: blur(8px); pointer-events: none; user-select: none; }
+</style>
+</head><body>
+<div id="pw-gate">
+  <div id="pw-gate-box">
+    <div class="lock">🔐</div>
+    <div class="logo">UNNI GUIDE</div>
+    <h1>제휴사 전용 리포트</h1>
+    <div class="subtitle">본 리포트는 비밀번호 보호된 자료입니다.</div>
+    <div class="partner-label">For. Thome</div>
+    <input type="password" id="pw-input" placeholder="비밀번호 입력" autofocus />
+    <button onclick="checkPassword()">열람하기</button>
+    <div class="error" id="pw-error"></div>
+    <div class="hint">비밀번호는 담당자에게 문의해 주세요.</div>
+  </div>
+</div>
+<script>
+async function sha256(str) {
+  const buf = new TextEncoder().encode(str);
+  const hash = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+async function checkPassword() {
+  const input = document.getElementById('pw-input').value;
+  const expected = '8f60799dbdf0944e82dee8ce4ecafe2883cd52784b25b85ac05a403910ab6981';
+  const hash = await sha256(input);
+  if (hash === expected) {
+    document.getElementById('pw-gate').style.display = 'none';
+    document.body.classList.remove('pw-locked');
+    sessionStorage.setItem('ug_unlock_thome', '1');
+  } else {
+    document.getElementById('pw-error').textContent = '비밀번호가 올바르지 않습니다.';
+    document.getElementById('pw-input').value = '';
+  }
+}
+document.getElementById('pw-input').addEventListener('keypress', e => {
+  if (e.key === 'Enter') checkPassword();
+});
+// 세션 내 재접속 시 통과
+if (sessionStorage.getItem('ug_unlock_thome') === '1') {
+  document.getElementById('pw-gate').style.display = 'none';
+  document.body.classList.remove('pw-locked');
+} else {
+  document.body.classList.add('pw-locked');
+}
+</script>
+
+
+<div class="top-nav">
+  <div class="top-nav-inner">
+    <a href="#kpi">핵심 성과</a>
+    <a href="#language">언어 · 유형</a>
+    <a href="#trend">주간 추이</a>
+    <a href="#service">서비스 실적</a>
+    <a href="#nationality">국적 객단가</a>
+    <a href="#insight">Key Insights</a>
+    <div class="spacer"></div>
+    <span style="font-size:12px;color:#999;">Confidential</span>
+  </div>
+</div>
+
+<div class="container">
+
+<div class="header">
+  <div class="header-top">
+    <div class="logo">UNNI GUIDE</div>
+    <div style="font-size:13px;opacity:0.8;">제휴사 공유용</div>
+  </div>
+  <h1>오프라인 센터 운영 리포트</h1>
+  <div class="sub">2026.03.03 ~ 2026.03.31 (29일) · 서울 강남 언니가이드 센터</div>
+</div>
+
+<!-- 유동인구 배너 -->
+<div class="location-banner">
+  <div class="icon">📍</div>
+  <div style="flex:1;">
+    <div class="label">LOCATION POWER</div>
+    <div class="main">센터 인근 500m 월 평균 유동인구 약 <strong>174만명</strong></div>
+    <div class="sub">2026년 3월 데이터 기준 · 강남 메인 상권 중심부 입지</div>
+  </div>
+</div>
+
+<!-- KPI -->
+<div class="section" id="kpi">
+  <div class="section-title">📊 센터 핵심 성과</div>
+  <div class="section-desc">외국인 고객 대상 월간 센터 운영 지표입니다.</div>
+  <div class="kpi-grid">
+    <div class="kpi accent"><div class="label">센터 방문객 수</div><div class="value">678</div><div class="sub">일평균 23명 방문</div></div>
+    <div class="kpi"><div class="label">센터 방문 예약 수</div><div class="value">1,011</div><div class="sub">일평균 35건 예약</div></div>
+    <div class="kpi"><div class="label">센터 방문객 국적</div><div class="value">20+개국</div><div class="sub">글로벌 고객</div></div>
+  </div>
+  <div class="note">* 방문객 수는 예약 건 단위로 집계 (1건 = 1명 카운트). 함께 방문한 대기 고객은 트래킹 대상에서 제외.</div>
+</div>
+
+<!-- 언어 & 방문 유형 -->
+<div class="section" id="language">
+  <div class="section-title">🌐 언어권 · 방문 고객 유형</div>
+  <div class="section-desc">방문 고객의 언어권 분포와 방한/재한 비중입니다.</div>
+  <div class="row row-2">
+    <div class="card">
+      <h3>언어별 센터 방문 비중</h3>
+      <table>
+        <thead><tr><th>언어</th><th>방문 고객</th><th>비중</th></tr></thead>
+        <tbody>
+          <tr><td>🇬🇧 영어권</td><td class="bold">559명</td><td class="bold">82.4%</td></tr>
+          <tr><td>🇹🇭 태국어권</td><td class="bold">69명</td><td class="bold">10.2%</td></tr>
+          <tr><td>🇨🇳 중국어권</td><td class="bold">50명</td><td class="bold">7.4%</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h3>방문 고객 유형</h3>
+      <table>
+        <thead><tr><th>구분</th><th>건수</th><th>비중</th></tr></thead>
+        <tbody>
+          <tr><td>방한 외국인 (관광)</td><td class="bold">301명</td><td>44.4%</td></tr>
+          <tr><td>재한 외국인 (거주)</td><td class="bold">377명</td><td>55.6%</td></tr>
+        </tbody>
+      </table>
+      <div class="note">* 4월 1일부 센터 방문 고객 100% 방한 외국인 전환 완료</div>
+    </div>
+  </div>
+</div>
+
+<!-- 주간 추이 -->
+<div class="section" id="trend">
+  <div class="section-title">📈 주간별 센터 방문 추이</div>
+  <div class="section-desc">센터 오픈 이후 누적 방문객 수 추이. 지속적인 우상향 확인.</div>
+  <div class="card">
+    <div class="chart-container" style="height:340px;"><canvas id="weeklyChartWeb"></canvas></div>
+  </div>
+</div>
+
+<!-- 서비스 실적 -->
+<div class="section" id="service">
+  <div class="section-title">💼 언니가이드 서비스 실적 (온/오프라인 통합)</div>
+  <div class="section-desc">언니가이드 서비스를 통해 시술·수술을 완료한 외국인 고객 데이터 (2026년 3월 정산 기준)</div>
+  <div class="kpi-grid" style="grid-template-columns:repeat(2,1fr);">
+    <div class="kpi accent"><div class="label">총 시/수술 금액</div><div class="value">2.4억</div><div class="sub">19개국 고객 · 3월 단월 기준</div></div>
+    <div class="kpi"><div class="label">평균 객단가</div><div class="value">144만원</div><div class="sub">1인 평균 시/수술 금액</div></div>
+  </div>
+</div>
+
+<!-- 국적 -->
+<div class="section" id="nationality">
+  <div class="section-title">🌍 국적별 비중 · 객단가 분포</div>
+  <div class="section-desc">3월 시/수술 완료 고객 국적별 분포와 TOP 5 객단가 국적입니다.</div>
+  <div class="row row-2">
+    <div class="card">
+      <h3>국적별 고객 비중 · 객단가</h3>
+      <table>
+        <thead><tr><th>국적</th><th>비중</th><th>인당 객단가</th></tr></thead>
+        <tbody><tr><td>🇹🇭 태국</td><td class="bold">42.1%</td><td class="bold">97만원</td></tr>
+<tr><td>🇹🇼 대만</td><td class="bold">18.9%</td><td class="bold">137만원</td></tr>
+<tr><td>🇺🇸 미국</td><td class="bold">18.3%</td><td class="bold">212만원</td></tr>
+<tr><td>🇨🇳 중국</td><td class="bold">4.9%</td><td class="bold">234만원</td></tr>
+<tr><td>🇲🇳 몽골</td><td class="bold">2.4%</td><td class="bold">39만원</td></tr>
+<tr><td>🇸🇬 싱가포르</td><td class="bold">2.4%</td><td class="bold">145만원</td></tr>
+<tr><td>🇨🇦 캐나다</td><td class="bold">1.8%</td><td class="bold">252만원</td></tr>
+<tr><td>🇲🇾 말레이시아</td><td class="bold">1.2%</td><td class="bold">475만원</td></tr>
+<tr><td>🌍 기타 11개국</td><td>7.9%</td><td>-</td></tr>
+</tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h3>주요 국적별 인당 객단가</h3>
+      <div class="chart-container" style="height:260px;"><canvas id="priceChartWeb"></canvas></div>
+      <div class="note">※ 고객 프리미엄 시술 선호도 지표</div>
+    </div>
+  </div>
+</div>
+
+<!-- 인사이트 -->
+<div class="section" id="insight">
+  <div class="section-title">💡 Key Insights</div>
+  <div class="insight">
+    <ul style="list-style:none;padding-left:0;">
+      <li>📍 3월 한 달간 <strong class="highlight">총 678명</strong>의 외국인 고객이 센터에 직접 방문 (일평균 <strong>23명</strong>)</li>
+      <li>📊 주간별 방문객 수 <strong>우상향 추세</strong> — 외국인 대상 센터 인지도 빠르게 확산</li>
+      <li>💰 언니가이드 서비스 3월 시/수술 금액 <strong class="highlight">2.4억</strong>, 평균 객단가 <strong>144만원</strong></li>
+      <li>🌍 <strong>19개국</strong> 다국적 고객층 — 태국·대만·미국이 80% 차지, 고단가 고객(미국·중국·말레이시아)도 고르게 분포</li>
+      <li>🎯 <strong>4월부터 100% 방한 외국인 전환</strong> — 인바운드 관광 타겟 브랜드에 최적 접점</li>
+    </ul>
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid rgba(243,156,18,0.3);">
+      <strong class="highlight" style="font-size:16px;">🏢 제휴 브랜드 노출 효과</strong>
+      <div style="margin-top:8px;">
+        월 <strong class="highlight">678명+</strong> 외국인이 방문하는 오프라인 공간에서 K-Beauty 브랜드 체험 · 구매 전환까지 <strong>원스톱 접점 확보</strong>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  <strong>UNNI GUIDE</strong> | 강남언니 언니가이드 오프라인 센터 · 서울 강남구<br>
+  본 리포트는 제휴 브랜드 전용 자료이며 외부 배포를 삼가해 주세요. | 2026.04.15
+</div>
+
+</div>
+
+<script>
+const D = {"labels": ["03-03", "03-04", "03-05", "03-06", "03-07", "03-08", "03-09", "03-10", "03-11", "03-12", "03-13", "03-14", "03-15", "03-16", "03-17", "03-18", "03-19", "03-20", "03-21", "03-22", "03-23", "03-24", "03-25", "03-26", "03-27", "03-28", "03-29", "03-30", "03-31"], "booking": [19, 23, 15, 23, 56, 34, 32, 32, 31, 52, 22, 22, 7, 19, 32, 22, 33, 53, 62, 66, 77, 49, 33, 47, 30, 31, 31, 37, 21], "visit": [9, 11, 10, 11, 17, 0, 25, 21, 19, 19, 35, 19, 0, 35, 27, 29, 17, 37, 28, 0, 33, 33, 29, 28, 47, 29, 0, 61, 49], "wk_labels": ["W10", "W11", "W12", "W13"], "wk_visit": [58, 138, 173, 199], "nat_labels": ["태국", "대만", "미국", "중국", "몽골", "싱가포르"], "nat_counts": [69, 31, 30, 8, 4, 4], "price_labels": ["🇨🇳 중국", "🇺🇸 미국", "🇹🇼 대만", "🇹🇭 태국"], "price_values": [2345000, 2119733, 1372121, 970671]};
+const C = ['#FF6A3B','#330C2E','#00B894','#FDCB6E','#0984E3','#E17055','#00CEC9','#A29BFE'];
+
+new Chart(document.getElementById('weeklyChartWeb'),{
+  type:'bar',
+  data:{labels:D.wk_labels,datasets:[
+    {data:D.wk_visit,backgroundColor:'#FF6A3B',borderRadius:8}
+  ]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{titleFont:{size:14},bodyFont:{size:14},padding:12}},scales:{x:{grid:{display:false},ticks:{font:{size:13}}},y:{grid:{color:'#F1F2F6'},ticks:{font:{size:12}},beginAtZero:true}}}
+});
+
+new Chart(document.getElementById('priceChartWeb'),{
+  type:'bar',
+  data:{labels:D.price_labels,datasets:[{data:D.price_values,backgroundColor:C.map(c=>c+'88'),borderColor:C,borderWidth:2,borderRadius:6}]},
+  options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false,grid:{display:false}},y:{grid:{display:false},ticks:{font:{size:14,weight:'600'}}}}}
+});
+</script>
+</body></html>

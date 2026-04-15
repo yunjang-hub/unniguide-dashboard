@@ -9,7 +9,7 @@
 # 매달 루틴:
 #   1. Excel에 해당 월 예약 + 정산 데이터 추가
 #   2. 터미널에서 ./run.sh 실행
-#   3. ~/Documents/unniguide-report/ 에서 HTML 확인
+#   3. ~/Documents/Unniguide/unniguide-report/ 에서 HTML 확인
 
 cd "$(dirname "$0")"
 

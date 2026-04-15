@@ -13,7 +13,7 @@ from datetime import datetime
 
 REPORT_MONTH = sys.argv[2] if len(sys.argv) > 2 else '2026-03'
 EXCEL_PATH = sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser('~/Downloads/언니가이드 운영 트렌드 데이터_26.04.xlsx')
-OUTPUT_DIR = os.path.expanduser('~/Documents/unniguide-report')
+OUTPUT_DIR = os.path.expanduser('~/Documents/Unniguide/unniguide-report')
 month_str = REPORT_MONTH.replace('-', '')
 report_month_kr = f"{REPORT_MONTH.split('-')[0]}년 {int(REPORT_MONTH.split('-')[1])}월"
 
