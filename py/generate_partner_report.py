@@ -615,6 +615,26 @@ tbody tr:hover{{background:#FFF8F5;}}
   </div>
 </div>
 
+<!-- 인사이트 (서비스 실적 바로 아래) -->
+<div class="section" id="insight">
+  <div class="section-title">💡 Key Insights</div>
+  <div class="insight">
+    <ul style="list-style:none;padding-left:0;">
+      <li>📍 3월 한 달간 <strong class="highlight">총 {실제방문자:,}명</strong>의 외국인 고객이 센터에 직접 방문 (일평균 <strong>{일평균방문:.0f}명</strong>)</li>
+      <li>📊 주간별 방문객 수 <strong>우상향 추세</strong> — 외국인 대상 센터 인지도 빠르게 확산</li>
+      <li>💰 언니가이드 서비스 3월 시/수술 금액 <strong class="highlight">{format_krw(total_매출)}</strong>, 평균 객단가 <strong>{format_krw(avg_객단가)}</strong></li>
+      <li>🌍 <strong>{num_국적}개국</strong> 다국적 고객층 — 태국·대만·미국이 80% 차지, 고단가 고객(미국·중국·말레이시아)도 고르게 분포</li>
+      <li>🎯 <strong>4월부터 100% 방한 외국인 전환</strong> — 인바운드 관광 타겟 브랜드에 최적 접점</li>
+    </ul>
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid rgba(243,156,18,0.3);">
+      <strong class="highlight" style="font-size:16px;">🏢 제휴 브랜드 노출 효과</strong>
+      <div style="margin-top:8px;">
+        월 <strong class="highlight">{실제방문자:,}명+</strong> 외국인이 방문하는 오프라인 공간에서 K-Beauty 브랜드 체험 · 구매 전환까지 <strong>원스톱 접점 확보</strong>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- 국적 -->
 <div class="section" id="nationality">
   <div class="section-title">🌍 국적별 비중 · 객단가 분포</div>
@@ -641,26 +661,6 @@ tbody tr:hover{{background:#FFF8F5;}}
   <div class="section-desc">언니가이드 서비스 3월 시/수술 완료 고객 기준 (중복 포함)</div>
   <div class="card">
     {cat_rows_html}
-  </div>
-</div>
-
-<!-- 인사이트 -->
-<div class="section" id="insight">
-  <div class="section-title">💡 Key Insights</div>
-  <div class="insight">
-    <ul style="list-style:none;padding-left:0;">
-      <li>📍 3월 한 달간 <strong class="highlight">총 {실제방문자:,}명</strong>의 외국인 고객이 센터에 직접 방문 (일평균 <strong>{일평균방문:.0f}명</strong>)</li>
-      <li>📊 주간별 방문객 수 <strong>우상향 추세</strong> — 외국인 대상 센터 인지도 빠르게 확산</li>
-      <li>💰 언니가이드 서비스 3월 시/수술 금액 <strong class="highlight">{format_krw(total_매출)}</strong>, 평균 객단가 <strong>{format_krw(avg_객단가)}</strong></li>
-      <li>🌍 <strong>{num_국적}개국</strong> 다국적 고객층 — 태국·대만·미국이 80% 차지, 고단가 고객(미국·중국·말레이시아)도 고르게 분포</li>
-      <li>🎯 <strong>4월부터 100% 방한 외국인 전환</strong> — 인바운드 관광 타겟 브랜드에 최적 접점</li>
-    </ul>
-    <div style="margin-top:20px;padding-top:16px;border-top:1px solid rgba(243,156,18,0.3);">
-      <strong class="highlight" style="font-size:16px;">🏢 제휴 브랜드 노출 효과</strong>
-      <div style="margin-top:8px;">
-        월 <strong class="highlight">{실제방문자:,}명+</strong> 외국인이 방문하는 오프라인 공간에서 K-Beauty 브랜드 체험 · 구매 전환까지 <strong>원스톱 접점 확보</strong>
-      </div>
-    </div>
   </div>
 </div>
 
