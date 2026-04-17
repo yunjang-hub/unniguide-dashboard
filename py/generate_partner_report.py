@@ -280,7 +280,11 @@ td{{padding:5px 8px;text-align:center;border-bottom:1px solid #E9ECEF;}}
 @media print{{
   html,body{{margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
   .page{{padding:0;}}
-  .section{{break-inside:avoid;page-break-inside:avoid;}}
+  .section{{break-inside:avoid;page-break-inside:avoid;page-break-after:auto;}}
+  .card{{break-inside:avoid;page-break-inside:avoid;}}
+  .kpi-grid{{break-inside:avoid;page-break-inside:avoid;}}
+  .row{{break-inside:avoid;page-break-inside:avoid;}}
+  .insight{{break-inside:avoid;page-break-inside:avoid;}}
 }}
 </style>
 </head><body>
@@ -498,6 +502,19 @@ tbody tr:hover{{background:#FFF8F5;}}
   .header{{padding:32px 20px;}}
   .header h1{{font-size:24px;}}
   .kpi .value{{font-size:30px;}}
+}}
+@media print{{
+  html,body{{margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;background:#fff;}}
+  .top-nav{{display:none !important;}}
+  .container{{padding:12px;}}
+  .section{{break-inside:avoid;page-break-inside:avoid;margin-bottom:20px;}}
+  .card{{break-inside:avoid;page-break-inside:avoid;}}
+  .kpi-grid{{break-inside:avoid;page-break-inside:avoid;}}
+  .kpi{{break-inside:avoid;}}
+  .row{{break-inside:avoid;page-break-inside:avoid;}}
+  .insight{{break-inside:avoid;page-break-inside:avoid;}}
+  .location-banner{{break-inside:avoid;page-break-inside:avoid;}}
+  .header{{break-after:avoid;}}
 }}
 </style>
 </head><body>

@@ -65,6 +65,19 @@ tbody tr:hover{background:#FFF8F5;}
   .header h1{font-size:24px;}
   .kpi .value{font-size:30px;}
 }
+@media print{
+  html,body{margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;background:#fff;}
+  .top-nav{display:none !important;}
+  .container{padding:12px;}
+  .section{break-inside:avoid;page-break-inside:avoid;margin-bottom:20px;}
+  .card{break-inside:avoid;page-break-inside:avoid;}
+  .kpi-grid{break-inside:avoid;page-break-inside:avoid;}
+  .kpi{break-inside:avoid;}
+  .row{break-inside:avoid;page-break-inside:avoid;}
+  .insight{break-inside:avoid;page-break-inside:avoid;}
+  .location-banner{break-inside:avoid;page-break-inside:avoid;}
+  .header{break-after:avoid;}
+}
 </style>
 
 <style>
@@ -329,39 +342,25 @@ if (sessionStorage.getItem('ug_unlock_바이탈뷰티') === '1') {
 
 <!-- 인사이트 -->
 
-<!-- 바이탈뷰티 전용 섹션 -->
 <div class="section" id="vitalbeauty">
   <div class="section-title">🧴 바이탈뷰티 센터 현장 데이터</div>
   <div class="section-desc">언니가이드 센터 내 바이탈뷰티 제품 체험 현황</div>
-  
   <div style="background:linear-gradient(135deg,#FFF0EB 0%,#FFF8F5 100%);border:2px solid #FF6A3B;border-radius:16px;padding:28px 32px;margin-bottom:20px;">
     <div style="display:flex;align-items:center;gap:20px;">
       <div style="font-size:48px;">☕</div>
       <div style="flex:1;">
         <div style="font-size:22px;font-weight:800;color:#330C2E;margin-bottom:6px;">센터 방문객의 거의 <span style="color:#FF6A3B;font-size:28px;">100%</span>가 바이탈뷰티 제품을 직접 체험</div>
-        <div style="font-size:15px;color:#636E72;line-height:1.6;">
-          언니가이드 센터 1층에서 <strong>바이탈뷰티 제품을 시음·체험한 후</strong> 상층으로 올라가 상담을 진행하는 구조로 운영되고 있어, 센터 방문 외국인 고객 <strong>거의 전원이 바이탈뷰티 제품에 자연스럽게 노출</strong>됩니다.
-        </div>
+        <div style="font-size:15px;color:#636E72;line-height:1.6;">언니가이드 센터 1층에서 <strong>바이탈뷰티 제품을 시음·체험한 후</strong> 상층으로 올라가 상담을 진행하는 구조로 운영되고 있어, 센터 방문 외국인 고객 <strong>거의 전원이 바이탈뷰티 제품에 자연스럽게 노출</strong>됩니다.</div>
       </div>
     </div>
     <div style="margin-top:16px;padding-top:16px;border-top:1px solid #FFD5C2;">
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;text-align:center;">
-        <div>
-          <div style="font-size:28px;font-weight:800;color:#FF6A3B;">678명</div>
-          <div style="font-size:12px;color:#636E72;">3월 센터 방문객</div>
-        </div>
-        <div>
-          <div style="font-size:28px;font-weight:800;color:#FF6A3B;">~100%</div>
-          <div style="font-size:12px;color:#636E72;">1층 제품 체험률</div>
-        </div>
-        <div>
-          <div style="font-size:28px;font-weight:800;color:#FF6A3B;">20+개국</div>
-          <div style="font-size:12px;color:#636E72;">글로벌 노출 국적</div>
-        </div>
+        <div><div style="font-size:28px;font-weight:800;color:#FF6A3B;">678명</div><div style="font-size:12px;color:#636E72;">3월 센터 방문객</div></div>
+        <div><div style="font-size:28px;font-weight:800;color:#FF6A3B;">~100%</div><div style="font-size:12px;color:#636E72;">1층 제품 체험률</div></div>
+        <div><div style="font-size:28px;font-weight:800;color:#FF6A3B;">20+개국</div><div style="font-size:12px;color:#636E72;">글로벌 노출 국적</div></div>
       </div>
     </div>
   </div>
-
   <div class="card">
     <h3>💡 바이탈뷰티 × 인기 시술 카테고리 시너지</h3>
     <div style="font-size:15px;line-height:1.8;color:#2D3436;padding:8px 0;">
@@ -370,29 +369,11 @@ if (sessionStorage.getItem('ug_unlock_바이탈뷰티') === '1') {
       <div style="background:#F8F9FA;border-radius:12px;padding:20px;margin-top:12px;">
         <div style="font-size:13px;font-weight:700;color:#330C2E;margin-bottom:12px;">고객 니즈 연결 맵</div>
         <table style="width:100%;font-size:14px;border-collapse:collapse;">
-          <thead>
-            <tr style="border-bottom:2px solid #E9ECEF;">
-              <th style="text-align:left;padding:8px;color:#636E72;font-size:12px;">인기 시술</th>
-              <th style="text-align:left;padding:8px;color:#636E72;font-size:12px;">고객 니즈</th>
-              <th style="text-align:left;padding:8px;color:#636E72;font-size:12px;">바이탈뷰티 연결 제품</th>
-            </tr>
-          </thead>
+          <thead><tr style="border-bottom:2px solid #E9ECEF;"><th style="text-align:left;padding:8px;color:#636E72;font-size:12px;">인기 시술</th><th style="text-align:left;padding:8px;color:#636E72;font-size:12px;">고객 니즈</th><th style="text-align:left;padding:8px;color:#636E72;font-size:12px;">바이탈뷰티 연결</th></tr></thead>
           <tbody>
-            <tr style="border-bottom:1px solid #F1F2F6;">
-              <td style="padding:10px 8px;font-weight:600;">💧 스킨부스터 (28.4%)</td>
-              <td style="padding:10px 8px;">피부 재생 · 수분 · 탄력</td>
-              <td style="padding:10px 8px;color:#FF6A3B;font-weight:700;">콜라겐 · 시카</td>
-            </tr>
-            <tr style="border-bottom:1px solid #F1F2F6;">
-              <td style="padding:10px 8px;font-weight:600;">🔬 마이크로니들링 (19.8%)</td>
-              <td style="padding:10px 8px;">콜라겐 생성 · 피부 장벽 강화</td>
-              <td style="padding:10px 8px;color:#FF6A3B;font-weight:700;">레티놀 · 콜라겐</td>
-            </tr>
-            <tr>
-              <td style="padding:10px 8px;font-weight:600;">✨ 리프팅 (51.9%)</td>
-              <td style="padding:10px 8px;">안티에이징 · 탄력 회복</td>
-              <td style="padding:10px 8px;color:#FF6A3B;font-weight:700;">콜라겐 · 레티놀</td>
-            </tr>
+            <tr style="border-bottom:1px solid #F1F2F6;"><td style="padding:10px 8px;font-weight:600;">💧 스킨부스터 (28.4%)</td><td style="padding:10px 8px;">피부 재생 · 수분 · 탄력</td><td style="padding:10px 8px;color:#FF6A3B;font-weight:700;">콜라겐 · 시카</td></tr>
+            <tr style="border-bottom:1px solid #F1F2F6;"><td style="padding:10px 8px;font-weight:600;">🔬 마이크로니들링 (19.8%)</td><td style="padding:10px 8px;">콜라겐 생성 · 장벽 강화</td><td style="padding:10px 8px;color:#FF6A3B;font-weight:700;">레티놀 · 콜라겐</td></tr>
+            <tr><td style="padding:10px 8px;font-weight:600;">✨ 리프팅 (51.9%)</td><td style="padding:10px 8px;">안티에이징 · 탄력 회복</td><td style="padding:10px 8px;color:#FF6A3B;font-weight:700;">콜라겐 · 레티놀</td></tr>
           </tbody>
         </table>
       </div>
@@ -422,7 +403,7 @@ if (sessionStorage.getItem('ug_unlock_바이탈뷰티') === '1') {
 
 <div class="footer">
   <strong>UNNI GUIDE</strong> | 강남언니 언니가이드 오프라인 센터 · 서울 강남구<br>
-  본 리포트는 바이탈뷰티 전용 자료이며 외부 배포를 삼가해 주세요. | 2026.04.15
+  본 리포트는 바이탈뷰티 전용 자료이며 외부 배포를 삼가해 주세요. | 2026.04.17
 </div>
 
 </div>
