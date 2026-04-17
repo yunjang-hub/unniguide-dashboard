@@ -515,7 +515,6 @@ tbody tr:hover{{background:#FFF8F5;}}
   .insight{{break-inside:avoid;page-break-inside:avoid;}}
   .location-banner{{break-inside:avoid;page-break-inside:avoid;}}
   .header{{break-after:avoid;}}
-  #nationality{{page-break-before:always;}}
 }}
 </style>
 </head><body>
