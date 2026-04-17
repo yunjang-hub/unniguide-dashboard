@@ -65,19 +65,6 @@ tbody tr:hover{background:#FFF8F5;}
   .header h1{font-size:24px;}
   .kpi .value{font-size:30px;}
 }
-@media print{
-  html,body{margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;background:#fff;}
-  .top-nav{display:none !important;}
-  .container{padding:12px;}
-  .section{break-inside:avoid;page-break-inside:avoid;margin-bottom:20px;}
-  .card{break-inside:avoid;page-break-inside:avoid;}
-  .kpi-grid{break-inside:avoid;page-break-inside:avoid;}
-  .kpi{break-inside:avoid;}
-  .row{break-inside:avoid;page-break-inside:avoid;}
-  .insight{break-inside:avoid;page-break-inside:avoid;}
-  .location-banner{break-inside:avoid;page-break-inside:avoid;}
-  .header{break-after:avoid;}
-}
 </style>
 
 <style>
@@ -122,7 +109,7 @@ body.pw-locked > *:not(#pw-gate) { filter: blur(8px); pointer-events: none; user
     <div class="logo">UNNI GUIDE</div>
     <h1>제휴사 전용 리포트</h1>
     <div class="subtitle">본 리포트는 비밀번호 보호된 자료입니다.</div>
-    <div class="partner-label">For. 바임</div>
+    <div class="partner-label">For. 클래시스</div>
     <input type="password" id="pw-input" placeholder="비밀번호 입력" autofocus />
     <button onclick="checkPassword()">열람하기</button>
     <div class="error" id="pw-error"></div>
@@ -137,12 +124,12 @@ async function sha256(str) {
 }
 async function checkPassword() {
   const input = document.getElementById('pw-input').value;
-  const expected = 'c6c2d6a7d0375bc3760057e6f206999069cd165bd52422a4628b8cce928dbcf2';
+  const expected = '600c667f0f6b694edd2b0f31056956d2fd170877e341c0062fa886c63630542b';
   const hash = await sha256(input);
   if (hash === expected) {
     document.getElementById('pw-gate').style.display = 'none';
     document.body.classList.remove('pw-locked');
-    sessionStorage.setItem('ug_unlock_바임', '1');
+    sessionStorage.setItem('ug_unlock_클래시스', '1');
   } else {
     document.getElementById('pw-error').textContent = '비밀번호가 올바르지 않습니다.';
     document.getElementById('pw-input').value = '';
@@ -152,7 +139,7 @@ document.getElementById('pw-input').addEventListener('keypress', e => {
   if (e.key === 'Enter') checkPassword();
 });
 // 세션 내 재접속 시 통과
-if (sessionStorage.getItem('ug_unlock_바임') === '1') {
+if (sessionStorage.getItem('ug_unlock_클래시스') === '1') {
   document.getElementById('pw-gate').style.display = 'none';
   document.body.classList.remove('pw-locked');
 } else {
@@ -257,26 +244,6 @@ if (sessionStorage.getItem('ug_unlock_바임') === '1') {
   </div>
 </div>
 
-<!-- 인사이트 (서비스 실적 바로 아래) -->
-<div class="section" id="insight">
-  <div class="section-title">💡 Key Insights</div>
-  <div class="insight">
-    <ul style="list-style:none;padding-left:0;">
-      <li>📍 3월 한 달간 <strong class="highlight">총 678명</strong>의 외국인 고객이 센터에 직접 방문 (일평균 <strong>23명</strong>)</li>
-      <li>📊 주간별 방문객 수 <strong>우상향 추세</strong> — 외국인 대상 센터 인지도 빠르게 확산</li>
-      <li>💰 언니가이드 서비스 3월 시/수술 금액 <strong class="highlight">2.4억</strong>, 평균 객단가 <strong>144만원</strong></li>
-      <li>🌍 <strong>19개국</strong> 다국적 고객층 — 태국·대만·미국이 80% 차지, 고단가 고객(미국·중국·말레이시아)도 고르게 분포</li>
-      <li>🎯 <strong>4월부터 100% 방한 외국인 전환</strong> — 인바운드 관광 타겟 브랜드에 최적 접점</li>
-    </ul>
-    <div style="margin-top:20px;padding-top:16px;border-top:1px solid rgba(243,156,18,0.3);">
-      <strong class="highlight" style="font-size:16px;">🏢 제휴 브랜드 노출 효과</strong>
-      <div style="margin-top:8px;">
-        월 <strong class="highlight">678명+</strong> 외국인이 방문하는 오프라인 공간에서 K-Beauty 브랜드 체험 · 구매 전환까지 <strong>원스톱 접점 확보</strong>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- 국적 -->
 <div class="section" id="nationality">
   <div class="section-title">🌍 국적별 비중 · 객단가 분포</div>
@@ -360,60 +327,29 @@ if (sessionStorage.getItem('ug_unlock_바임') === '1') {
   </div>
 </div>
 
-<div class="section" id="vaim">
-  <div class="section-title">💧 바임 · 쥬베룩 센터 성과 데이터</div>
-  <div style="background:linear-gradient(135deg,#F0F8FF 0%,#E8F4FD 100%);border:2px solid #0984E3;border-radius:16px;padding:28px 32px;margin-bottom:20px;">
-    <div style="display:flex;align-items:center;gap:20px;">
-      <div style="font-size:48px;">💎</div>
-      <div style="flex:1;">
-        <div style="font-size:22px;font-weight:800;color:#330C2E;margin-bottom:6px;">3월 외국인 고객 <span style="color:#0984E3;font-size:28px;">10명 중 1명</span>이 쥬베룩 시술 선택</div>
-        <div style="font-size:15px;color:#636E72;line-height:1.6;">쥬베룩은 언니가이드 <strong>스킨부스터 카테고리 내 2위</strong>이며, 고객의 <strong>100%가 포텐자, 리쥬란, 울쎄라 등 프리미엄 시술과 복합</strong>으로 받아 객단가를 끌어올리는 핵심 시술로 자리잡고 있습니다.</div>
+<!-- 인사이트 -->
+<div class="section" id="insight">
+  <div class="section-title">💡 Key Insights</div>
+  <div class="insight">
+    <ul style="list-style:none;padding-left:0;">
+      <li>📍 3월 한 달간 <strong class="highlight">총 678명</strong>의 외국인 고객이 센터에 직접 방문 (일평균 <strong>23명</strong>)</li>
+      <li>📊 주간별 방문객 수 <strong>우상향 추세</strong> — 외국인 대상 센터 인지도 빠르게 확산</li>
+      <li>💰 언니가이드 서비스 3월 시/수술 금액 <strong class="highlight">2.4억</strong>, 평균 객단가 <strong>144만원</strong></li>
+      <li>🌍 <strong>19개국</strong> 다국적 고객층 — 태국·대만·미국이 80% 차지, 고단가 고객(미국·중국·말레이시아)도 고르게 분포</li>
+      <li>🎯 <strong>4월부터 100% 방한 외국인 전환</strong> — 인바운드 관광 타겟 브랜드에 최적 접점</li>
+    </ul>
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid rgba(243,156,18,0.3);">
+      <strong class="highlight" style="font-size:16px;">🏢 제휴 브랜드 노출 효과</strong>
+      <div style="margin-top:8px;">
+        월 <strong class="highlight">678명+</strong> 외국인이 방문하는 오프라인 공간에서 K-Beauty 브랜드 체험 · 구매 전환까지 <strong>원스톱 접점 확보</strong>
       </div>
-    </div>
-    <div style="margin-top:16px;padding-top:16px;border-top:1px solid #B3D9F2;">
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;text-align:center;">
-        <div><div style="font-size:28px;font-weight:800;color:#0984E3;">9.9%</div><div style="font-size:12px;color:#636E72;">전체 고객 중 선택률</div></div>
-        <div><div style="font-size:28px;font-weight:800;color:#0984E3;">222만원</div><div style="font-size:12px;color:#636E72;">쥬베룩 고객 객단가</div></div>
-        <div><div style="font-size:28px;font-weight:800;color:#0984E3;">1.6배</div><div style="font-size:12px;color:#636E72;">전체 평균 대비</div></div>
-      </div>
-    </div>
-  </div>
-  <div class="card">
-    <h3>💡 쥬베룩 x 인기 시술 시너지</h3>
-    <div style="font-size:15px;line-height:1.8;padding:8px 0;">
-      <p style="margin-bottom:16px;">쥬베룩 고객은 <strong>100% 복합 시술</strong>로 받고 있어, 쥬베룩이 <strong>피부 볼륨, 모공 개선, 재생</strong>을 원하는 프리미엄 고객의 핵심 선택지로 작동하고 있습니다.</p>
-      <div style="background:#F8F9FA;border-radius:12px;padding:20px;">
-        <div style="font-size:13px;font-weight:700;color:#330C2E;margin-bottom:12px;">스킨부스터 카테고리 순위 (전체 시술 중)</div>
-        <table style="width:100%;font-size:14px;border-collapse:collapse;">
-          <thead><tr style="border-bottom:2px solid #E9ECEF;"><th style="text-align:left;padding:8px;color:#636E72;font-size:12px;">순위</th><th style="text-align:left;padding:8px;color:#636E72;font-size:12px;">스킨부스터</th><th style="text-align:left;padding:8px;color:#636E72;font-size:12px;">고객 비중</th><th style="text-align:left;padding:8px;color:#636E72;font-size:12px;">포지션</th></tr></thead>
-          <tbody>
-            <tr style="border-bottom:1px solid #F1F2F6;"><td style="padding:10px 8px;font-weight:700;color:#636E72;">1</td><td style="padding:10px 8px;">리쥬란</td><td style="padding:10px 8px;">12.3%</td><td style="padding:10px 8px;color:#636E72;">재생 특화</td></tr>
-            <tr style="border-bottom:1px solid #F1F2F6;background:#F0F8FF;"><td style="padding:10px 8px;font-weight:700;color:#0984E3;">2</td><td style="padding:10px 8px;font-weight:700;color:#0984E3;">쥬베룩</td><td style="padding:10px 8px;font-weight:700;color:#0984E3;">9.9%</td><td style="padding:10px 8px;color:#0984E3;font-weight:700;">볼륨 + 재생</td></tr>
-            <tr style="border-bottom:1px solid #F1F2F6;"><td style="padding:10px 8px;font-weight:700;color:#636E72;">3</td><td style="padding:10px 8px;">물광주사</td><td style="padding:10px 8px;">7.4%</td><td style="padding:10px 8px;color:#636E72;">수분 공급</td></tr>
-            <tr><td style="padding:10px 8px;font-weight:700;color:#636E72;">4</td><td style="padding:10px 8px;">엑소좀</td><td style="padding:10px 8px;">4.3%</td><td style="padding:10px 8px;color:#636E72;">첨단 재생</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <div style="background:#F8F9FA;border-radius:12px;padding:20px;margin-top:16px;">
-        <div style="font-size:13px;font-weight:700;color:#330C2E;margin-bottom:12px;">쥬베룩 고객 주요 국적</div>
-        <table style="width:100%;font-size:14px;border-collapse:collapse;">
-          <thead><tr style="border-bottom:2px solid #E9ECEF;"><th style="text-align:left;padding:8px;color:#636E72;font-size:12px;">국적</th><th style="text-align:left;padding:8px;color:#636E72;font-size:12px;">비중</th><th style="text-align:left;padding:8px;color:#636E72;font-size:12px;">특징</th></tr></thead>
-          <tbody>
-            <tr style="border-bottom:1px solid #F1F2F6;"><td style="padding:10px 8px;font-weight:600;">🇹🇼 대만</td><td style="padding:10px 8px;font-weight:700;color:#0984E3;">31.2%</td><td style="padding:10px 8px;">볼륨 + 재생 복합 선호</td></tr>
-            <tr style="border-bottom:1px solid #F1F2F6;"><td style="padding:10px 8px;font-weight:600;">🇺🇸 미국</td><td style="padding:10px 8px;font-weight:700;color:#0984E3;">25.0%</td><td style="padding:10px 8px;">프리미엄 풀패키지</td></tr>
-            <tr style="border-bottom:1px solid #F1F2F6;"><td style="padding:10px 8px;font-weight:600;">🇹🇭 태국</td><td style="padding:10px 8px;">12.5%</td><td style="padding:10px 8px;">모공 + 피부결 개선</td></tr>
-            <tr><td style="padding:10px 8px;font-weight:600;">기타 5개국</td><td style="padding:10px 8px;">31.3%</td><td style="padding:10px 8px;">글로벌 수요 분산</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <p style="margin-top:16px;font-size:14px;color:#636E72;">쥬베룩은 <strong>볼륨·모공·재생</strong>을 원하는 외국인 고객의 핵심 선택지이며, 100% 복합 시술 패턴으로 <strong>병원 객단가 상승의 동반자</strong> 역할을 하고 있습니다.</p>
     </div>
   </div>
 </div>
 
 <div class="footer">
   <strong>UNNI GUIDE</strong> | 강남언니 언니가이드 오프라인 센터 · 서울 강남구<br>
-  본 리포트는 바임 전용 자료이며 외부 배포를 삼가해 주세요. | 2026.04.17
+  본 리포트는 제휴 브랜드 전용 자료이며 외부 배포를 삼가해 주세요. | 2026.04.15
 </div>
 
 </div>
