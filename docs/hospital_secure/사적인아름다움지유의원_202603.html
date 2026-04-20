@@ -170,86 +170,7 @@ body {
 }
 </style>
 
-<style>
-#pw-gate {
-  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  background: linear-gradient(135deg, #330C2E 0%, #5C2D54 100%);
-  display: flex; align-items: center; justify-content: center;
-  z-index: 99999; font-family: -apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR',sans-serif;
-}
-#pw-gate-box {
-  background: white; border-radius: 20px; padding: 48px 40px;
-  max-width: 440px; width: 90%; text-align: center;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-}
-#pw-gate-box .logo { font-size: 14px; font-weight: 800; letter-spacing: 2px; color: #FF6A3B; margin-bottom: 12px; }
-#pw-gate-box h1 { font-size: 22px; font-weight: 800; color: #330C2E; margin-bottom: 8px; }
-#pw-gate-box .subtitle { font-size: 14px; color: #636E72; margin-bottom: 8px; }
-#pw-gate-box .partner-label { font-size: 13px; color: #FF6A3B; font-weight: 700; margin-bottom: 28px; padding: 6px 14px; background: #FFF0EB; border-radius: 20px; display: inline-block; }
-#pw-gate-box .lock { font-size: 40px; margin-bottom: 16px; }
-#pw-gate-box input {
-  width: 100%; padding: 14px 18px; font-size: 16px;
-  border: 2px solid #E9ECEF; border-radius: 12px;
-  outline: none; transition: border 0.15s; margin-bottom: 12px;
-  text-align: center; letter-spacing: 2px;
-}
-#pw-gate-box input:focus { border-color: #FF6A3B; }
-#pw-gate-box button {
-  width: 100%; padding: 14px; font-size: 15px; font-weight: 700;
-  background: #FF6A3B; color: white; border: none; border-radius: 12px;
-  cursor: pointer; transition: background 0.15s;
-}
-#pw-gate-box button:hover { background: #E8551F; }
-#pw-gate-box .error { color: #E74C3C; font-size: 13px; margin-top: 10px; min-height: 18px; }
-#pw-gate-box .hint { font-size: 12px; color: #999; margin-top: 20px; }
-body.pw-locked { overflow: hidden; }
-body.pw-locked > *:not(#pw-gate) { filter: blur(8px); pointer-events: none; user-select: none; }
-</style>
 </head><body>
-<div id="pw-gate">
-  <div id="pw-gate-box">
-    <div class="lock">🔐</div>
-    <div class="logo">UNNI GUIDE</div>
-    <h1>제휴사 전용 리포트</h1>
-    <div class="subtitle">본 리포트는 비밀번호 보호된 자료입니다.</div>
-    <div class="partner-label">For. 사적인아름다움지유의원</div>
-    <input type="password" id="pw-input" placeholder="비밀번호 입력" autofocus />
-    <button onclick="checkPassword()">열람하기</button>
-    <div class="error" id="pw-error"></div>
-    <div class="hint">비밀번호는 담당자에게 문의해 주세요.</div>
-  </div>
-</div>
-<script>
-async function sha256(str) {
-  const buf = new TextEncoder().encode(str);
-  const hash = await crypto.subtle.digest('SHA-256', buf);
-  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
-}
-async function checkPassword() {
-  const input = document.getElementById('pw-input').value;
-  const expected = '22a08e5830db8848e4c7fd6aa32c09d06d86906839f9542d6b04531164fd2a61';
-  const hash = await sha256(input);
-  if (hash === expected) {
-    document.getElementById('pw-gate').style.display = 'none';
-    document.body.classList.remove('pw-locked');
-    sessionStorage.setItem('ug_unlock_사적인아름다움지유의원', '1');
-  } else {
-    document.getElementById('pw-error').textContent = '비밀번호가 올바르지 않습니다.';
-    document.getElementById('pw-input').value = '';
-  }
-}
-document.getElementById('pw-input').addEventListener('keypress', e => {
-  if (e.key === 'Enter') checkPassword();
-});
-// 세션 내 재접속 시 통과
-if (sessionStorage.getItem('ug_unlock_사적인아름다움지유의원') === '1') {
-  document.getElementById('pw-gate').style.display = 'none';
-  document.body.classList.remove('pw-locked');
-} else {
-  document.body.classList.add('pw-locked');
-}
-</script>
-
 
 
 
@@ -324,9 +245,9 @@ if (sessionStorage.getItem('ug_unlock_사적인아름다움지유의원') === '1
 <div class="section">
   <div class="section-title"><span class="icon">🌏</span> 귀원 고객 국적 분포</div>
   <div class="card">
-    <div class="chart-half">
-      <div><h3 style="font-size:15px;margin-bottom:8px;">국적 비중</h3><div class="chart-container"><canvas id="natPie"></canvas></div></div>
-      <div><h3 style="font-size:15px;margin-bottom:8px;">국적별 객단가</h3><div class="chart-container"><canvas id="natBar"></canvas></div></div>
+    <div class="chart-half" style="grid-template-columns:1fr;">
+      <div><h3 style="font-size:15px;margin-bottom:8px;">국적 비중</h3><div class="chart-container" style="height:320px;overflow:hidden;"><canvas id="natPie"></canvas></div></div>
+      <div><h3 style="font-size:15px;margin-bottom:8px;">국적별 객단가</h3><div class="chart-container" style="height:340px;overflow:hidden;"><canvas id="natBar"></canvas></div></div>
     </div>
   </div>
   <div class='card'><h3 style='font-size:15px;margin-bottom:12px;'>국적별 정산 내역 · 인기 시술</h3><table class='data-table'><thead><tr><th>국적</th><th class='num'>건수</th><th class='num'>시수술 금액</th><th class='num'>건당 객단가</th><th>인기 시술 TOP 3</th></tr></thead><tbody><tr><td>🇺🇸 미국</td><td class="num">8건</td><td class="num">1,359만원</td><td class="num bold">170만원</td><td style="font-size:12px;">보톡스, 리쥬란, 울쎄라</td></tr><tr><td>🇹🇭 태국</td><td class="num">4건</td><td class="num">890만원</td><td class="num bold">223만원</td><td style="font-size:12px;">보톡스, 필러, 울쎄라</td></tr><tr><td>🇦🇺 호주</td><td class="num">2건</td><td class="num">766만원</td><td class="num bold">383만원</td><td style="font-size:12px;">제네시스, 리쥬란, 울쎄라</td></tr><tr><td>🇲🇾 말레이시아</td><td class="num">1건</td><td class="num">741만원</td><td class="num bold">741만원</td><td style="font-size:12px;">쥬베룩, 인모드, 리쥬란</td></tr><tr><td>🇹🇼 대만</td><td class="num">2건</td><td class="num">605만원</td><td class="num bold">302만원</td><td style="font-size:12px;">엑소좀, 슈링크, 울블랑</td></tr><tr><td>🇲🇳 몽골</td><td class="num">2건</td><td class="num">117만원</td><td class="num bold">59만원</td><td style="font-size:12px;">보톡스, 써마지, 리쥬란</td></tr><tr><td>🇮🇪 아일랜드</td><td class="num">1건</td><td class="num">93만원</td><td class="num bold">93만원</td><td style="font-size:12px;">보톡스</td></tr><tr><td>🇮🇳 인도</td><td class="num">1건</td><td class="num">38만원</td><td class="num bold">38만원</td><td style="font-size:12px;">슈링크, 포텐자</td></tr><tr><td>🇵🇭 필리핀</td><td class="num">1건</td><td class="num">19만원</td><td class="num bold">19만원</td><td style="font-size:12px;"><span style="color:#999;">-</span></td></tr></tbody></table></div>
