@@ -376,28 +376,69 @@ if (sessionStorage.getItem('ug_unlock_루호성형외과의원') === '1') {
   </div>
 </div>
 
-<!-- 국적별 -->
+<!-- 국적별 (파이프라인 기반) -->
 <div class="section">
-  <div class="section-title"><span class="icon">🌏</span> 귀원 고객 국적 분포</div>
+  <div class="section-title"><span class="icon">🌏</span> 귀원 살아있는 예약 · 국적 & 수술 분포</div>
+  <p style="font-size:13px;color:var(--text-light);margin-bottom:12px;">2025년 11월 이후 <b>귀원에 살아있는 예약(완료 + 예약 확정)</b> 13건 기준. 당월 내원 건수로는 파악하기 어려운 고객 구성 패턴이 드러납니다.</p>
   <div class="card">
-    <div class="chart-half">
-      <div><h3 style="font-size:15px;margin-bottom:8px;">국적 비중</h3><div class="chart-container"><canvas id="natPie"></canvas></div></div>
-      <div><h3 style="font-size:15px;margin-bottom:8px;">국적별 객단가</h3><div class="chart-container"><canvas id="natBar"></canvas></div></div>
+    <div class="chart-half" style="grid-template-columns:1fr 1fr;">
+      <div>
+        <h3 style="font-size:15px;margin-bottom:12px;">국적 분포 (N=13)</h3>
+        <table class="data-table">
+          <thead><tr><th>국적</th><th class="num">건수</th><th class="num">비중</th></tr></thead>
+          <tbody>
+            <tr><td>🇨🇦 캐나다</td><td class="num bold">5</td><td class="num">38.5%</td></tr>
+            <tr><td>🇺🇸 미국</td><td class="num bold">4</td><td class="num">30.8%</td></tr>
+            <tr><td>🇦🇺 호주</td><td class="num bold">2</td><td class="num">15.4%</td></tr>
+            <tr><td>🇹🇭 태국</td><td class="num">1</td><td class="num">7.7%</td></tr>
+            <tr><td>🇹🇼 대만</td><td class="num">1</td><td class="num">7.7%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <h3 style="font-size:15px;margin-bottom:12px;">수술 카테고리 분포</h3>
+        <table class="data-table">
+          <thead><tr><th>카테고리</th><th class="num">건수</th></tr></thead>
+          <tbody>
+            <tr><td>쌍꺼풀 · 눈매교정</td><td class="num bold" style="color:#FF6A3B;">5</td></tr>
+            <tr><td>코 재수술</td><td class="num bold">2</td></tr>
+            <tr><td>눈 재수술</td><td class="num">1</td></tr>
+            <tr><td>코 수술 (첫)</td><td class="num">1</td></tr>
+            <tr><td>안면거상</td><td class="num">1</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="insight-box" style="margin-top:14px;">
+      <b>🔎 포인트</b>: 귀원 예약의 <b>85%가 영어권(캐나다·미국·호주)</b>, 주력 카테고리는 <b>쌍꺼풀·눈매교정과 코·눈 재수술</b>입니다. 영어 상담 역량 + 재수술 케이스 강점이 핵심 매력 포인트로 작용하고 있습니다.
     </div>
   </div>
-  
-  
 </div>
 
-<!-- 언니가이드 서비스 전체 국적 트렌드 (귀원 참고용) -->
+<!-- 언니가이드 서비스 전체 · 수술 국적 트렌드 -->
 <div class="section">
-  <div class="section-title"><span class="icon">🌐</span> 언니가이드 서비스 전체 · 2026년 3월 국적 트렌드</div>
-  <p style="font-size:13px;color:var(--text-light);margin-bottom:12px;">언니가이드 서비스 전체 외국인 고객의 국적별 비중과 객단가 추이입니다. 귀원의 타겟 고객군 발굴에 참고해주세요.</p>
+  <div class="section-title"><span class="icon">🌐</span> 언니가이드 전체 · 수술 예약 국적 트렌드</div>
+  <p style="font-size:13px;color:var(--text-light);margin-bottom:12px;">2025년 10월 ~ 2026년 4월 전체 수술 예약 확정 + 완료 건 기준 (N=87). 귀원 타겟 고객군 발굴에 참고해주세요. <b>시술(보톡스·울쎄라 등)은 제외</b>한 수술만 집계입니다.</p>
   <div class="card">
     <table class="data-table">
-      <thead><tr><th>국적</th><th>비중</th><th class="num">인당 객단가</th><th>선호 시술 TOP 3</th></tr></thead>
-      <tbody><tr><td>🇹🇭 태국</td><td>40.7%</td><td class="num bold">90만원</td><td style="font-size:12px;">보톡스, 포텐자, 울쎄라</td></tr><tr><td>🇹🇼 대만</td><td>21.0%</td><td class="num bold">131만원</td><td style="font-size:12px;">온다, 보톡스, 리프팅시술</td></tr><tr><td>🇺🇸 미국</td><td>18.5%</td><td class="num bold">212만원</td><td style="font-size:12px;">울쎄라, 리쥬란, 포텐자</td></tr><tr><td>🇨🇳 중국</td><td>4.9%</td><td class="num bold">224만원</td><td style="font-size:12px;">포텐자, 울쎄라, 온다</td></tr><tr><td>🇲🇳 몽골</td><td>2.5%</td><td class="num bold">39만원</td><td style="font-size:12px;">보톡스, 트리플레이저, 써마지</td></tr><tr><td>🇸🇬 싱가포르</td><td>2.5%</td><td class="num bold">145만원</td><td style="font-size:12px;">피코레이저, 울쎄라, 리쥬란</td></tr><tr><td>🇲🇾 말레이시아</td><td>1.2%</td><td class="num bold">475만원</td><td style="font-size:12px;">보톡스, 아쿠아필, 피코레이저</td></tr><tr><td>🇦🇺 호주</td><td>1.2%</td><td class="num bold">383만원</td><td style="font-size:12px;">제네시스, 리쥬란, 울쎄라</td></tr><tr><td>🇬🇧 영국</td><td>1.2%</td><td class="num bold">141만원</td><td style="font-size:12px;"><span style="color:#999;">-</span></td></tr><tr><td>🇨🇦 캐나다</td><td>1.2%</td><td class="num bold">283만원</td><td style="font-size:12px;"><span style="color:#999;">-</span></td></tr><tr><td colspan="4" style="text-align:center;color:#999;font-size:12px;">외 8개국</td></tr></tbody>
+      <thead><tr><th>국적</th><th class="num">건수</th><th class="num">비중</th><th>선호 수술 TOP 3</th></tr></thead>
+      <tbody>
+        <tr style="background:#FFF8F5;"><td class="bold">🇺🇸 미국</td><td class="num bold">26</td><td class="num bold" style="color:#FF6A3B;">29.9%</td><td style="font-size:12px;">쌍꺼풀·눈매교정, 코 수술, 지방흡입</td></tr>
+        <tr style="background:#FFF8F5;"><td class="bold">🇹🇼 대만</td><td class="num bold">13</td><td class="num bold" style="color:#FF6A3B;">14.9%</td><td style="font-size:12px;">쌍꺼풀·눈매교정, 코 수술, 눈 재수술</td></tr>
+        <tr style="background:#FFF8F5;"><td class="bold">🇨🇦 캐나다</td><td class="num bold">10</td><td class="num bold" style="color:#FF6A3B;">11.5%</td><td style="font-size:12px;">코 수술, 쌍꺼풀·눈매교정, 코끝/콧볼</td></tr>
+        <tr><td>🇦🇺 호주</td><td class="num">7</td><td class="num">8.0%</td><td style="font-size:12px;">쌍꺼풀·눈매교정, 실리프팅, 지방흡입</td></tr>
+        <tr><td>🇫🇷 프랑스</td><td class="num">5</td><td class="num">5.7%</td><td style="font-size:12px;">눈밑 지방재배치/이식, 이마거상, 상안검</td></tr>
+        <tr><td>🇸🇬 싱가포르</td><td class="num">5</td><td class="num">5.7%</td><td style="font-size:12px;">이마거상, 코 수술, 지방흡입</td></tr>
+        <tr><td>🇹🇭 태국</td><td class="num">4</td><td class="num">4.6%</td><td style="font-size:12px;">코 재수술, 광대, 턱</td></tr>
+        <tr><td>🇭🇰 홍콩</td><td class="num">4</td><td class="num">4.6%</td><td style="font-size:12px;">쌍꺼풀·눈매교정, 눈밑 지방재배치/이식, 코 수술</td></tr>
+        <tr><td>🇨🇳 중국</td><td class="num">3</td><td class="num">3.4%</td><td style="font-size:12px;">하안검, 지방흡입</td></tr>
+        <tr><td>🇮🇩 인도네시아</td><td class="num">2</td><td class="num">2.3%</td><td style="font-size:12px;">상안검, 하안검</td></tr>
+        <tr><td colspan="4" style="text-align:center;color:#999;font-size:12px;">외 필리핀·베트남·러시아·우즈베키스탄 등 6개국</td></tr>
+      </tbody>
     </table>
+    <div class="insight-box" style="margin-top:14px;">
+      <b>🎯 귀원 타겟 시사점</b>: 언니가이드 수술 예약의 <b>56%가 미국·대만·캐나다</b>, 그중 귀원은 이미 <b>캐나다·미국에서 강한 포지셔닝</b>을 확보했습니다. 아직 예약이 없는 <b>대만(14.9%, 선호 카테고리: 쌍꺼풀·눈 재수술)</b>은 귀원 주력과 일치하므로 신규 타겟 1순위로 권장됩니다.
+    </div>
   </div>
 </div>
 
