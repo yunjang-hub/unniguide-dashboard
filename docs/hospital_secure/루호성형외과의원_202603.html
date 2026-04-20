@@ -299,6 +299,83 @@ if (sessionStorage.getItem('ug_unlock_루호성형외과의원') === '1') {
   </div>
 </div>
 
+<!-- 수술 파이프라인 (리드타임 기반) -->
+<div class="section">
+  <div class="section-title"><span class="icon">⏳</span> 수술 파이프라인 · 리드타임 관점</div>
+  <p style="font-size:13px;color:var(--text-light);margin-bottom:12px;">귀원의 3월 "0건 완료"는 <b>pipeline 부재가 아닌 리드타임 지연</b>에 가깝습니다. 수술은 본질적으로 상담 → 결정 → 체류/방한 일정 조율 과정이 길어, 당월 접수 건이 당월 매출에 반영되지 않는 구조입니다.</p>
+
+  <!-- 월별 예약확정 누적 -->
+  <div class="card">
+    <h3 style="font-size:15px;margin-bottom:12px;">귀원 월별 예약 접수 현황 <span style="font-size:12px;color:var(--text-light);font-weight:400;">(예약확정일 기준)</span></h3>
+    <table class="data-table">
+      <thead><tr><th>월</th><th class="num">신규 접수</th><th class="num">예약 확정</th><th class="num">완료</th><th class="num">유실</th><th class="num">누적 확정+완료</th></tr></thead>
+      <tbody>
+        <tr><td>2025-11</td><td class="num">3</td><td class="num">0</td><td class="num bold" style="color:#00A878;">3</td><td class="num" style="color:#999;">0</td><td class="num bold">3</td></tr>
+        <tr><td>2025-12</td><td class="num">2</td><td class="num">0</td><td class="num">0</td><td class="num" style="color:#E74C3C;">2</td><td class="num bold">3</td></tr>
+        <tr><td>2026-01</td><td class="num">3</td><td class="num">0</td><td class="num">0</td><td class="num" style="color:#E74C3C;">3</td><td class="num bold">3</td></tr>
+        <tr><td>2026-02</td><td class="num">3</td><td class="num">2</td><td class="num bold" style="color:#00A878;">1</td><td class="num" style="color:#999;">0</td><td class="num bold">6</td></tr>
+        <tr style="background:#FFF9E6;"><td class="bold">2026-03</td><td class="num bold" style="color:#FF6A3B;">10</td><td class="num bold" style="color:#FF6A3B;">5</td><td class="num bold" style="color:#00A878;">1</td><td class="num" style="color:#E74C3C;">4</td><td class="num bold" style="color:#FF6A3B;">12</td></tr>
+        <tr><td>2026-04 (진행중)</td><td class="num">1+</td><td class="num">1+</td><td class="num">-</td><td class="num">-</td><td class="num bold">13+</td></tr>
+      </tbody>
+    </table>
+    <p style="font-size:12px;color:var(--text-light);margin-top:10px;line-height:1.6;">→ <b>3월 신규 접수 10건은 귀원 역대 최다 월 접수</b>입니다. 그 중 6건(확정 5 + 완료 1)이 살아있는 예약으로 전환되었고, 4건은 상담 후 미진행/취소되었습니다.</p>
+  </div>
+
+  <!-- 3월 예약의 내원 타임라인 -->
+  <div class="card" style="margin-top:12px;">
+    <h3 style="font-size:15px;margin-bottom:12px;">3월에 확정된 예약의 실제 내원일</h3>
+    <table class="data-table">
+      <thead><tr><th>시술</th><th>예약 확정일</th><th>내원 예정일</th><th class="num">확정→내원 D+일수</th><th>상태</th></tr></thead>
+      <tbody>
+        <tr><td>눈 수술</td><td>03-21</td><td>04-10</td><td class="num">20일</td><td><span class="badge badge-neutral" style="background:#D5F5ED;color:#00896A;">시수술 완료</span></td></tr>
+        <tr><td>안면거상 상담</td><td>03-12</td><td>04-20</td><td class="num">39일</td><td>예약 확정</td></tr>
+        <tr><td>수술</td><td>03-12</td><td>04-20</td><td class="num">39일</td><td>예약 확정</td></tr>
+        <tr><td>눈 · 코 수술</td><td>03-05</td><td>05-09</td><td class="num">65일</td><td>예약 확정</td></tr>
+        <tr><td>쌍꺼풀 + 눈매교정</td><td>03-05</td><td class="bold" style="color:#FF6A3B;">08-24</td><td class="num bold" style="color:#FF6A3B;">172일</td><td>예약 확정</td></tr>
+        <tr><td>쌍꺼풀 + 눈매교정</td><td>03-05</td><td class="bold" style="color:#FF6A3B;">08-24</td><td class="num bold" style="color:#FF6A3B;">172일</td><td>예약 확정</td></tr>
+      </tbody>
+    </table>
+    <p style="font-size:12px;color:var(--text-light);margin-top:10px;line-height:1.6;">→ 3월 확정 예약 6건 중 <b>5건이 4월 이후 내원</b> 예정. 즉 3월 매출에는 잡히지 않지만, <b>4~8월 매출로 이연 반영</b>됩니다.</p>
+  </div>
+
+  <!-- 리드타임 벤치마크 -->
+  <div class="card" style="margin-top:12px;">
+    <h3 style="font-size:15px;margin-bottom:12px;">언니가이드 수술 고객 리드타임 벤치마크</h3>
+    <p style="font-size:12px;color:var(--text-light);margin-bottom:12px;">2025년 10월 ~ 2026년 4월 전체 수술 예약 확정 + 완료 건 기준 (N=82)</p>
+    <table class="data-table">
+      <thead><tr><th>구간</th><th class="num">언니가이드 전체 평균</th><th class="num">중앙값</th><th class="num">귀원 평균</th><th class="num">귀원 중앙값</th></tr></thead>
+      <tbody>
+        <tr><td class="bold">채팅 접수 → 예약 확정</td><td class="num">11일</td><td class="num">7일</td><td class="num">10일</td><td class="num">6일</td></tr>
+        <tr><td class="bold">예약 확정 → 내원일</td><td class="num">71일</td><td class="num">48일</td><td class="num bold" style="color:#FF6A3B;">81일</td><td class="num bold" style="color:#FF6A3B;">68일</td></tr>
+        <tr style="background:var(--ivory);"><td class="bold">채팅 접수 → 내원일 (총)</td><td class="num bold">82일</td><td class="num bold">63일</td><td class="num bold" style="color:#FF6A3B;">91일</td><td class="num bold" style="color:#FF6A3B;">78일</td></tr>
+      </tbody>
+    </table>
+    <div style="margin-top:14px;">
+      <div style="font-size:12px;color:var(--text-light);margin-bottom:4px;">예약 확정 → 내원일 구간 분포 (전체 수술 고객 N=82)</div>
+      <div style="display:flex;font-size:11px;height:28px;border-radius:6px;overflow:hidden;">
+        <div style="background:#00A878;flex:16;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;">16%</div>
+        <div style="background:#5BC0A3;flex:4;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;">4%</div>
+        <div style="background:#F5D547;flex:13;display:flex;align-items:center;justify-content:center;color:#5A4A00;font-weight:700;">13%</div>
+        <div style="background:#F39C12;flex:27;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;">27%</div>
+        <div style="background:#E67E22;flex:12;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;">12%</div>
+        <div style="background:#E74C3C;flex:28;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;">28%</div>
+      </div>
+      <div style="display:flex;font-size:10px;color:var(--text-light);margin-top:4px;text-align:center;">
+        <div style="flex:16;">~7일</div><div style="flex:4;">8-14일</div><div style="flex:13;">15-30일</div><div style="flex:27;">1-2개월</div><div style="flex:12;">2-3개월</div><div style="flex:28;">3개월+</div>
+      </div>
+    </div>
+    <p style="font-size:12px;color:var(--text-light);margin-top:14px;line-height:1.6;">→ 언니가이드 수술 고객의 <b>28%가 3개월 이상 앞서 예약</b>을 잡습니다. 귀원은 주력 수술이 <b>코·눈 재수술 등 본격 수술</b>이라 체류 일정 조율·다수 상담 비교 과정이 길어, 리드타임이 전체 평균보다 10일 긴 편입니다.</p>
+  </div>
+
+  <!-- 인사이트 박스 -->
+  <div class="insight-box" style="margin-top:12px;">
+    <b>💡 핵심 시사점</b><br>
+    <b>1. "3월 0건"은 전환 실패가 아닌 리드타임 지연 효과</b>입니다. 3월 확정된 6건의 예약이 순차적으로 4~8월 매출로 반영될 예정입니다.<br>
+    <b>2. 3월 신규 접수 10건(역대 최다)</b>은 귀원 인지도/노출이 상승 중이라는 신호입니다. 유실 4건은 다음 섹션의 원인 분석 참고 바랍니다.<br>
+    <b>3. 수술 상품 특성상 "빠른 예약·빠른 내원"은 구조적으로 어려움</b>을 이해해 주시고, pipeline 지표(신규 접수, 예약 확정 누적)를 당월 완료 건수와 함께 보셔야 정확한 성과 판단이 가능합니다.
+  </div>
+</div>
+
 
 
 <!-- 국적별 -->
