@@ -290,7 +290,7 @@ if (sessionStorage.getItem('ug_unlock_루호성형외과의원') === '1') {
         <tr><td>2026-04 (진행중)</td><td class="num">1+</td><td class="num">1+</td><td class="num">-</td><td class="num">-</td><td class="num bold">13+</td></tr>
       </tbody>
     </table>
-    <p style="font-size:12px;color:var(--text-light);margin-top:10px;line-height:1.6;">→ <b>3월 신규 접수 10건은 귀원 역대 최다 월 접수</b>입니다. 그 중 6건(확정 5 + 완료 1)이 살아있는 예약으로 전환되었습니다.</p>
+    <p style="font-size:12px;color:var(--text-light);margin-top:10px;line-height:1.6;">→ <b>3월 신규 접수 10건은 귀원 역대 최다 월 접수</b>입니다. 그 중 6건(확정 5 + 완료 1)이 예약으로 전환되었습니다.</p>
   </div>
 
   <!-- 3월 예약의 내원 타임라인 -->
@@ -313,7 +313,7 @@ if (sessionStorage.getItem('ug_unlock_루호성형외과의원') === '1') {
   <!-- 리드타임 벤치마크 -->
   <div class="card" style="margin-top:12px;">
     <h3 style="font-size:15px;margin-bottom:12px;">언니가이드 수술 고객 리드타임 벤치마크</h3>
-    <p style="font-size:12px;color:var(--text-light);margin-bottom:12px;">2025년 10월 ~ 2026년 4월 전체 수술 예약 확정 + 완료 건 기준 (N=82)</p>
+    <p style="font-size:12px;color:var(--text-light);margin-bottom:12px;">2025년 10월 ~ 2026년 4월 언니가이드 수술 예약 확정·완료 건 기준</p>
     <table class="data-table">
       <thead><tr><th>구간</th><th class="num">언니가이드 전체 평균</th><th class="num">중앙값</th><th class="num">귀원 평균</th><th class="num">귀원 중앙값</th></tr></thead>
       <tbody>
@@ -323,7 +323,7 @@ if (sessionStorage.getItem('ug_unlock_루호성형외과의원') === '1') {
       </tbody>
     </table>
     <div style="margin-top:14px;">
-      <div style="font-size:12px;color:var(--text-light);margin-bottom:4px;">예약 확정 → 내원일 구간 분포 (전체 수술 고객 N=82)</div>
+      <div style="font-size:12px;color:var(--text-light);margin-bottom:4px;">예약 확정 → 내원일 구간 분포 (언니가이드 전체 수술 고객 기준)</div>
       <div style="display:flex;font-size:11px;height:28px;border-radius:6px;overflow:hidden;">
         <div style="background:#00A878;flex:16;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;">16%</div>
         <div style="background:#5BC0A3;flex:4;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;">4%</div>
@@ -348,42 +348,14 @@ if (sessionStorage.getItem('ug_unlock_루호성형외과의원') === '1') {
   </div>
 </div>
 
-<!-- 당월 성과 -->
-<div class="section">
-  <div class="section-title"><span class="icon">📊</span> 2026년 3월 성과</div>
-  <div class="metric-grid">
-    <div class="metric-card"><div class="label">시/수술 완료</div><div class="value">0건</div><div class="sub"><span class="badge badge-neutral">N/A</span> 전월 0건</div></div>
-    <div class="metric-card"><div class="label">정산 매출</div><div class="value">0원</div><div class="sub">수수료 0원</div></div>
-    <div class="metric-card"><div class="label">인당 객단가</div><div class="value">-</div><div class="sub">실 결제 기준</div></div>
-    <div class="metric-card"><div class="label">누적 완료</div><div class="value">2건</div><div class="sub">총 1,250만원</div></div>
-  </div>
-</div>
-
-<!-- 월별 추이 -->
-<div class="section">
-  <div class="section-title"><span class="icon">📈</span> 월별 추이</div>
-  <div class="card">
-    <div class="chart-container" style="height:260px;"><canvas id="monthlyChart"></canvas></div>
-    <table class="data-table trend-table" style="margin-top:16px;">
-      <thead><tr><th>구분</th><th>12월</th><th>03월</th></tr></thead>
-      <tbody>
-        <tr><td class="bold">완료 건수</td><td class="">2건</td><td class="highlight">0건</td></tr>
-        <tr><td style="color:var(--text-light);font-size:12px;">건수 MoM</td><td class="">-</td><td class="highlight" style="color:#E74C3C;font-weight:600;">▼ 100.0%</td></tr>
-        <tr><td class="bold">정산 금액</td><td class="">1,250만원</td><td class="highlight">0원</td></tr>
-        <tr><td style="color:var(--text-light);font-size:12px;">매출 MoM</td><td class="">-</td><td class="highlight" style="color:#E74C3C;font-weight:600;">▼ 100.0%</td></tr>
-      </tbody>
-    </table>
-  </div>
-</div>
-
 <!-- 국적별 (파이프라인 기반) -->
 <div class="section">
-  <div class="section-title"><span class="icon">🌏</span> 귀원 살아있는 예약 · 국적 & 수술 분포</div>
-  <p style="font-size:13px;color:var(--text-light);margin-bottom:12px;">2025년 11월 이후 <b>귀원에 살아있는 예약(완료 + 예약 확정)</b> 13건 기준. 당월 내원 건수로는 파악하기 어려운 고객 구성 패턴이 드러납니다.</p>
+  <div class="section-title"><span class="icon">🌏</span> 귀원 예약 확정 고객 · 국적 & 수술 분포</div>
+  <p style="font-size:13px;color:var(--text-light);margin-bottom:12px;">2025년 11월 이후 <b>귀원에 예약을 확정한 고객</b> 기준. 당월 내원 건수만으로는 파악하기 어려운 고객 구성 패턴이 드러납니다.</p>
   <div class="card">
     <div class="chart-half" style="grid-template-columns:1fr 1fr;">
       <div>
-        <h3 style="font-size:15px;margin-bottom:12px;">국적 분포 (N=13)</h3>
+        <h3 style="font-size:15px;margin-bottom:12px;">국적 분포</h3>
         <table class="data-table">
           <thead><tr><th>국적</th><th class="num">건수</th><th class="num">비중</th></tr></thead>
           <tbody>
@@ -418,7 +390,7 @@ if (sessionStorage.getItem('ug_unlock_루호성형외과의원') === '1') {
 <!-- 언니가이드 서비스 전체 · 수술 국적 트렌드 -->
 <div class="section">
   <div class="section-title"><span class="icon">🌐</span> 언니가이드 전체 · 수술 예약 국적 트렌드</div>
-  <p style="font-size:13px;color:var(--text-light);margin-bottom:12px;">2025년 10월 ~ 2026년 4월 전체 수술 예약 확정 + 완료 건 기준 (N=87). 귀원 타겟 고객군 발굴에 참고해주세요. <b>시술(보톡스·울쎄라 등)은 제외</b>한 수술만 집계입니다.</p>
+  <p style="font-size:13px;color:var(--text-light);margin-bottom:12px;">2025년 10월 ~ 2026년 4월 언니가이드 전체 수술 예약 확정·완료 건 기준. 귀원 타겟 고객군 발굴에 참고해주세요. <b>시술(보톡스·울쎄라 등)은 제외</b>한 수술만 집계입니다.</p>
   <div class="card">
     <table class="data-table">
       <thead><tr><th>국적</th><th class="num">건수</th><th class="num">비중</th><th>선호 수술 TOP 3</th></tr></thead>
@@ -504,27 +476,6 @@ if (sessionStorage.getItem('ug_unlock_루호성형외과의원') === '1') {
 <script>
 const D = {"nat_labels": [], "nat_counts": [], "nat_prices": [], "monthly_labels": ["12월", "03월"], "monthly_completed": [2, 0], "monthly_revenue": [12500000.0, 0], "monthly_mom": [null, -100.0]};
 const C = ['#FF6A3B','#330C2E','#00B894','#FDCB6E','#0984E3','#E17055','#00CEC9','#A29BFE','#FD79A8','#55A3E8','#F39C12','#2ECC71','#E74C3C','#9B59B6','#1ABC9C'];
-
-// 월별 추이 차트 (정산 매출 바)
-new Chart(document.getElementById('monthlyChart'),{
-  type:'bar',
-  data:{
-    labels:D.monthly_labels,
-    datasets:[
-      {label:'정산 매출',data:D.monthly_revenue,backgroundColor:'#FF6A3B88',borderColor:'#FF6A3B',borderWidth:1,borderRadius:6}
-    ]
-  },
-  options:{
-    responsive:true,maintainAspectRatio:false,
-    plugins:{
-      legend:{display:false},
-      tooltip:{callbacks:{label:function(ctx){return '정산 매출: '+(ctx.parsed.y/10000).toLocaleString()+'만원';}}}
-    },
-    scales:{
-      y:{title:{display:true,text:'정산 매출 (원)'},grid:{color:'#F1F2F6'},ticks:{callback:v=>(v/10000).toFixed(0)+'만'}}
-    }
-  }
-});
 
 // 국적 차트
 if(D.nat_labels.length>0){
