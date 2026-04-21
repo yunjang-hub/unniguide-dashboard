@@ -201,6 +201,13 @@ def load_operation_excel(file_path):
     df_res['시술수술명'] = df_res['시술수술명'].apply(lambda x: str(x).strip() if pd.notna(x) else '')
     df_res['예약상태'] = df_res['예약상태'].apply(lambda x: str(x).strip() if pd.notna(x) else '')
 
+    # 매출구분: 채팅접수일자가 '오프라인'이고 내원일 >= 2026-03-03 (센터 오픈일)이면 오프라인, 나머지는 온라인
+    OFFLINE_CENTER_OPEN = pd.Timestamp('2026-03-03')
+    ch_str = df_res['채팅접수일자'].astype(str).str.strip()
+    offline_mask = (ch_str == '오프라인') & (df_res['내원일'] >= OFFLINE_CENTER_OPEN)
+    df_res['매출구분'] = '온라인'
+    df_res.loc[offline_mask, '매출구분'] = '오프라인'
+
     df_completed = df_res[df_res['예약상태'] == '시/수술 완료'].copy()
     df_all = df_res.copy()  # 전체 (취소/노쇼 포함)
 
@@ -479,6 +486,13 @@ with st.sidebar:
 
     all_hospitals = sorted(df_completed['병원명'].dropna().unique())
     selected_hospitals = st.multiselect("병원", all_hospitals, default=[], placeholder="전체 병원")
+
+    sales_channel = st.radio(
+        "매출 구분",
+        ["전체", "온라인", "오프라인 센터"],
+        index=0,
+        help="오프라인 센터 = 마더시트 채팅접수일자 '오프라인' & 내원일 ≥ 2026-03-03",
+    )
     st.divider()
     st.caption(f"예약완료 {len(df_completed):,}건 | 정산 {len(df_settle):,}건")
 
@@ -493,6 +507,12 @@ if selected_hospitals:
     mask_res = mask_res & df_completed['병원명'].isin(selected_hospitals)
     if len(df_settle) > 0:
         mask_set = mask_set & df_settle['병원명'].isin(selected_hospitals)
+
+# 매출구분 필터 (마더시트 기준. 정산시트는 구분 없음 → 필터 미적용)
+if sales_channel == "온라인":
+    mask_res = mask_res & (df_completed['매출구분'] == '온라인')
+elif sales_channel == "오프라인 센터":
+    mask_res = mask_res & (df_completed['매출구분'] == '오프라인')
 
 filtered_res = df_completed[mask_res].copy()
 filtered_set = df_settle[mask_set].copy() if len(df_settle) > 0 else pd.DataFrame()
@@ -563,6 +583,77 @@ with tab1:
     fc4.metric("객단가", format_krw(f_avg))
     fc5.metric("국적 수", f"{f_nat}개국")
     fc6.metric("병원 수", f"{f_hosp}개")
+
+    st.markdown("")
+
+    # --- 온라인 vs 오프라인 센터 구분 (마더시트 실제금액 기준) ---
+    st.subheader("🏢 온라인 / 오프라인 센터 매출 구분")
+    st.caption("마더시트 기준 · 오프라인 센터 = 2026-03-03 오픈 이후 센터 방문 고객 · 선택한 기간·국적·병원 필터 적용")
+
+    # 매출구분 필터는 여기서는 제외하고 전체 구분을 항상 보여줌 (구분해서도 보고 전체로도 보기 위해)
+    split_base = df_completed.copy()
+    split_mask = split_base['월'].isin(selected_months)
+    if selected_nationalities:
+        split_mask = split_mask & split_base['고객국적'].isin(selected_nationalities)
+    if selected_hospitals:
+        split_mask = split_mask & split_base['병원명'].isin(selected_hospitals)
+    split_filtered = split_base[split_mask]
+
+    on_df = split_filtered[split_filtered['매출구분'] == '온라인']
+    off_df = split_filtered[split_filtered['매출구분'] == '오프라인']
+
+    on_cnt, on_rev = len(on_df), on_df['실제금액'].sum()
+    off_cnt, off_rev = len(off_df), off_df['실제금액'].sum()
+    total_rev = on_rev + off_rev
+    on_aov = on_rev / on_cnt if on_cnt > 0 else 0
+    off_aov = off_rev / off_cnt if off_cnt > 0 else 0
+    on_pct = on_rev / total_rev * 100 if total_rev > 0 else 0
+    off_pct = off_rev / total_rev * 100 if total_rev > 0 else 0
+
+    sc1, sc2, sc3, sc4, sc5, sc6 = st.columns(6)
+    sc1.metric("온라인 건수", f"{on_cnt:,}건")
+    sc2.metric("온라인 매출", format_krw(on_rev), f"{on_pct:.1f}%")
+    sc3.metric("온라인 객단가", format_krw(on_aov))
+    sc4.metric("오프라인 센터 건수", f"{off_cnt:,}건")
+    sc5.metric("오프라인 센터 매출", format_krw(off_rev), f"{off_pct:.1f}%")
+    sc6.metric("오프라인 센터 객단가", format_krw(off_aov))
+
+    # 월별 스택바 (건수 + 매출)
+    if len(split_filtered) > 0:
+        monthly_split = split_filtered.groupby(['월', '매출구분']).agg(
+            건수=('실제금액', 'count'), 매출=('실제금액', 'sum'),
+        ).reset_index()
+
+        ss1, ss2 = st.columns(2)
+        with ss1:
+            pivot_cnt = monthly_split.pivot(index='월', columns='매출구분', values='건수').fillna(0).sort_index()
+            fig_sc = go.Figure()
+            if '온라인' in pivot_cnt.columns:
+                fig_sc.add_trace(go.Bar(x=pivot_cnt.index.tolist(), y=pivot_cnt['온라인'].tolist(), name='온라인', marker_color=BRAND_ORANGE))
+            if '오프라인' in pivot_cnt.columns:
+                fig_sc.add_trace(go.Bar(x=pivot_cnt.index.tolist(), y=pivot_cnt['오프라인'].tolist(), name='오프라인 센터', marker_color=BRAND_PLUM))
+            fig_sc.update_layout(
+                title="월별 완료 건수 (온·오프 스택)", barmode='stack',
+                yaxis=dict(title="건수"),
+                legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5),
+                height=380, margin=dict(t=50, b=80),
+            )
+            st.plotly_chart(fig_sc, use_container_width=True)
+
+        with ss2:
+            pivot_rev = monthly_split.pivot(index='월', columns='매출구분', values='매출').fillna(0).sort_index()
+            fig_sr = go.Figure()
+            if '온라인' in pivot_rev.columns:
+                fig_sr.add_trace(go.Bar(x=pivot_rev.index.tolist(), y=pivot_rev['온라인'].tolist(), name='온라인', marker_color=BRAND_ORANGE))
+            if '오프라인' in pivot_rev.columns:
+                fig_sr.add_trace(go.Bar(x=pivot_rev.index.tolist(), y=pivot_rev['오프라인'].tolist(), name='오프라인 센터', marker_color=BRAND_PLUM))
+            fig_sr.update_layout(
+                title="월별 매출 (온·오프 스택, 마더시트 실제금액)", barmode='stack',
+                yaxis=dict(title="금액 (원)"),
+                legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5),
+                height=380, margin=dict(t=50, b=80),
+            )
+            st.plotly_chart(fig_sr, use_container_width=True)
 
     st.markdown("")
 
@@ -987,6 +1078,44 @@ with tab5:
             c1, c2 = st.columns(2)
             c1.metric("예약 취소 (전체)", f"{len(cancel_df)}건")
             c2.metric("No-show (전체)", f"{len(noshow_df)}건")
+
+    # --- 온·오프라인 구분 취소/No-show (마더시트 기준, 항상 노출) ---
+    if df_all is not None and '매출구분' in df_all.columns:
+        st.divider()
+        st.subheader("🏢 온·오프라인 구분 취소/No-show")
+        st.caption("마더시트 기준 · 선택 기간·국적·병원 필터 적용 (오프라인 센터 = 2026-03-03 오픈 이후)")
+
+        split_all = df_all.copy()
+        mask_split = split_all['월'].isin(selected_months)
+        if selected_nationalities:
+            mask_split = mask_split & split_all['고객국적'].isin(selected_nationalities)
+        if selected_hospitals:
+            mask_split = mask_split & split_all['병원명'].isin(selected_hospitals)
+        split_all = split_all[mask_split]
+
+        def _cancel_mask(s):
+            return s['예약상태'].isin(['예약 취소'])
+
+        def _noshow_mask(s):
+            return s['예약상태'].str.lower().str.contains('no-show|no show|noshow', na=False)
+
+        def _stats(df_sub):
+            total = len(df_sub)
+            cancels = int(_cancel_mask(df_sub).sum())
+            noshows = int(_noshow_mask(df_sub).sum())
+            rate = (cancels + noshows) / total * 100 if total > 0 else 0
+            return total, cancels, noshows, rate
+
+        all_tot, all_c, all_n, all_r = _stats(split_all)
+        on_tot, on_c, on_n, on_r = _stats(split_all[split_all['매출구분'] == '온라인'])
+        off_tot, off_c, off_n, off_r = _stats(split_all[split_all['매출구분'] == '오프라인'])
+
+        stats_rows = [
+            {'구분': '전체', '전체 예약': all_tot, '취소': all_c, 'No-show': all_n, '취소+노쇼율': f"{all_r:.1f}%"},
+            {'구분': '온라인', '전체 예약': on_tot, '취소': on_c, 'No-show': on_n, '취소+노쇼율': f"{on_r:.1f}%"},
+            {'구분': '오프라인 센터', '전체 예약': off_tot, '취소': off_c, 'No-show': off_n, '취소+노쇼율': f"{off_r:.1f}%"},
+        ]
+        st.dataframe(pd.DataFrame(stats_rows), use_container_width=True, hide_index=True)
 
 
 # ============================================================
