@@ -19,7 +19,18 @@ import sys
 import glob
 
 # Excel 파일: 인자로 받거나, Downloads에서 최신 파일 자동 탐색
-if len(sys.argv) > 1:
+# 인자가 'gsheet'면 운영 마스터 시트(GSHEET_ID_MAIN) export URL에서 자동 다운로드
+GSHEET_ID_MAIN = "1pNQiaK67nz6FhxssxgWvoiQr6YwT-5MCwDVvqUZW1SY"
+
+if len(sys.argv) > 1 and sys.argv[1] == 'gsheet':
+    import urllib.request
+    EXCEL_PATH = '/tmp/unniguide_op_live.xlsx'
+    print(f"🌐 Google Sheets에서 다운로드 중...")
+    urllib.request.urlretrieve(
+        f"https://docs.google.com/spreadsheets/d/{GSHEET_ID_MAIN}/export?format=xlsx",
+        EXCEL_PATH
+    )
+elif len(sys.argv) > 1:
     EXCEL_PATH = os.path.expanduser(sys.argv[1])
 else:
     # "언니가이드 운영 트렌드 데이터_*.xlsx" 중 가장 최신 파일
@@ -29,7 +40,7 @@ else:
         EXCEL_PATH = candidates[0]
     else:
         print("❌ Excel 파일을 찾을 수 없습니다.")
-        print("   사용법: python3 generate_report.py [엑셀파일경로]")
+        print("   사용법: python3 generate_report.py [엑셀파일경로 | gsheet] [YYYY-MM]")
         sys.exit(1)
 
 OUTPUT_DIR = os.path.expanduser('~/Documents/Unniguide/unniguide-report')
@@ -270,7 +281,14 @@ UNMATCHED_PROCEDURES = []
 # ============================================================
 print("📊 데이터 로딩 중...")
 
-df_res = pd.read_excel(EXCEL_PATH, sheet_name='언니가이드 예약확정 시트 데일리', header=1)
+# 시트명 자동 탐색: '예약확정' 키워드 매칭 (raw 시트 vs 가공본 호환)
+_xls = pd.ExcelFile(EXCEL_PATH)
+_res_sheet = next((s for s in _xls.sheet_names if '예약확정' in s), None)
+if _res_sheet is None:
+    print(f"❌ 예약확정 시트를 찾을 수 없습니다. 시트 목록: {_xls.sheet_names}")
+    sys.exit(1)
+print(f"  📋 예약 시트: {_res_sheet}")
+df_res = pd.read_excel(EXCEL_PATH, sheet_name=_res_sheet, header=1)
 df_res.columns = [
     'NO', '채팅접수일자', '예약확정일', '담당자', '고객명', '그룹여부',
     '고객국적', '사용언어', '예약상태', '통역서비스요청', '종류',
@@ -289,10 +307,30 @@ df_completed = df_res[df_res['예약상태'] == '시/수술 완료'].copy()
 # 정산 데이터
 import openpyxl
 wb = openpyxl.load_workbook(EXCEL_PATH, read_only=True, data_only=True)
-ws2 = wb['병원별 정산 및 언니가이드 매출 데이터']
+# 시트명 자동 탐색: '정산' 키워드 매칭
+_settle_sheet = next((s for s in wb.sheetnames if '정산' in s), None)
+if _settle_sheet is None:
+    print(f"❌ 정산 시트를 찾을 수 없습니다. 시트 목록: {wb.sheetnames}")
+    sys.exit(1)
+print(f"  📋 정산 시트: {_settle_sheet}")
+ws2 = wb[_settle_sheet]
 
 settlement_records = []
 current_month = None
+# 컬럼 인덱스 (헤더 행에서 동적 탐색)
+col_idx = {'병원명': 1, '고객명': 2, '국적': 4, '구분': 6, '시술금액': 7, '수수료금액': 8}
+
+def _to_amount(v):
+    if v is None or v == '':
+        return 0
+    if isinstance(v, (int, float)):
+        return float(v)
+    s = str(v).replace('₩', '').replace(',', '').strip()
+    try:
+        return float(s)
+    except ValueError:
+        return 0
+
 for row in ws2.iter_rows(min_row=1, max_row=ws2.max_row, values_only=False):
     vals = [c.value for c in row]
     a_val = str(vals[0]).strip() if vals[0] else ''
@@ -304,21 +342,42 @@ for row in ws2.iter_rows(min_row=1, max_row=ws2.max_row, values_only=False):
         except:
             pass
         continue
-    if a_val in ('NO', '', 'None', '재무팀 정산 요청 내역') or '정산 요청일' in a_val:
+    # 헤더 행: 컬럼 인덱스 자동 갱신 (raw vs 가공본 컬럼 순서 차이 흡수)
+    if a_val in ('NO', 'NO.'):
+        header_map = {}
+        for i, v in enumerate(vals):
+            if v is None: continue
+            h = str(v).strip()
+            if '병원명' in h: header_map['병원명'] = i
+            elif '고객명' in h and '한글' not in h: header_map['고객명'] = i
+            elif '국적' in h: header_map['국적'] = i
+            elif '구분' in h: header_map['구분'] = i
+            elif '금액' in h and '수수료' not in h and '총' not in h: header_map['시술금액'] = i
+            elif '수수료' in h: header_map['수수료금액'] = i
+        if len(header_map) >= 5:
+            col_idx.update(header_map)
         continue
-    if current_month and vals[1]:
-        hospital = str(vals[1]).strip()
+    if a_val in ('', 'None', '재무팀 정산 요청 내역') or '정산 요청일' in a_val:
+        continue
+    if current_month and len(vals) > col_idx['병원명'] and vals[col_idx['병원명']]:
+        hospital = str(vals[col_idx['병원명']]).strip()
         if hospital in ('병원명', ''):
             continue
         try:
+            # 데이터 헤더와 실제 셀이 어긋난 경우 (구분이 숫자/금액이 문자) 자동 감지·보정
+            v_gubun = vals[col_idx['구분']] if col_idx['구분'] < len(vals) else None
+            v_amt = vals[col_idx['시술금액']] if col_idx['시술금액'] < len(vals) else None
+            gubun_str = str(v_gubun).strip() if v_gubun is not None else ''
+            if gubun_str not in ('수술', '시술', '') and isinstance(v_amt, str) and v_amt.strip() in ('수술', '시술'):
+                v_gubun, v_amt = v_amt, v_gubun
             settlement_records.append({
                 '정산월': current_month,
                 '병원명': normalize_hospital(hospital),
-                '고객명': str(vals[2]).strip() if vals[2] else '',
-                '국적': str(vals[4]).strip() if vals[4] else '',
-                '구분': str(vals[6]).strip() if vals[6] else '',
-                '시술금액': float(vals[7]) if vals[7] else 0,
-                '수수료금액': float(vals[8]) if vals[8] else 0,
+                '고객명': str(vals[col_idx['고객명']]).strip() if col_idx['고객명'] < len(vals) and vals[col_idx['고객명']] else '',
+                '국적': str(vals[col_idx['국적']]).strip() if col_idx['국적'] < len(vals) and vals[col_idx['국적']] else '',
+                '구분': str(v_gubun).strip() if v_gubun else '',
+                '시술금액': _to_amount(v_amt),
+                '수수료금액': _to_amount(vals[col_idx['수수료금액']] if col_idx['수수료금액'] < len(vals) else 0),
             })
         except (ValueError, TypeError):
             pass
