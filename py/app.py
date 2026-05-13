@@ -168,7 +168,15 @@ def load_operation_excel(file_path):
     if str(file_path).startswith('http'):
         import urllib.request
         tmp = '/tmp/unniguide_gsheet_op.xlsx'
-        urllib.request.urlretrieve(file_path, tmp)
+        # file_path is the public export URL; the sheet_id is embedded in the URL.
+        # We re-derive it to route through the authenticated downloader.
+        import re as _re
+        m = _re.search(r"/spreadsheets/d/([^/]+)/", file_path)
+        if m:
+            download_gsheet_xlsx(m.group(1), tmp)
+        else:
+            import urllib.request
+            urllib.request.urlretrieve(file_path, tmp)
         file_path = tmp
 
     # 예약 시트
@@ -264,9 +272,14 @@ def load_internal_report(file_path):
     """내부리포트 Excel → 월별트렌드 df, 병원별성과 df, 취소노쇼 요약 df, 취소노쇼 상세 df"""
 
     if str(file_path).startswith('http'):
-        import urllib.request
         tmp = '/tmp/unniguide_gsheet_ir.xlsx'
-        urllib.request.urlretrieve(file_path, tmp)
+        import re as _re
+        m = _re.search(r"/spreadsheets/d/([^/]+)/", file_path)
+        if m:
+            download_gsheet_xlsx(m.group(1), tmp)
+        else:
+            import urllib.request
+            urllib.request.urlretrieve(file_path, tmp)
         file_path = tmp
 
     # 월별 트렌드
@@ -362,6 +375,62 @@ def gsheet_xlsx_url(sheet_id):
 
 def gsheet_csv_url(sheet_id, gid):
     return f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
+
+
+@st.cache_resource(show_spinner=False)
+def _get_gcp_authed_session():
+    """Return an authorized HTTP session for Google APIs, or None if creds unavailable.
+
+    Priority:
+    1. Streamlit Secrets `[gcp_service_account]` (used on Streamlit Community Cloud)
+    2. Local file `~/.streamlit/service_account.json`
+    Falls back to None → caller uses anonymous public download.
+    """
+    try:
+        from google.oauth2.service_account import Credentials
+        from google.auth.transport.requests import AuthorizedSession
+    except ImportError:
+        return None
+
+    info = None
+    try:
+        if "gcp_service_account" in st.secrets:
+            info = dict(st.secrets["gcp_service_account"])
+    except Exception:
+        info = None
+
+    if info is None:
+        local_path = os.path.expanduser("~/.streamlit/service_account.json")
+        if os.path.exists(local_path):
+            import json
+            with open(local_path) as f:
+                info = json.load(f)
+
+    if not info:
+        return None
+
+    scopes = [
+        "https://www.googleapis.com/auth/spreadsheets.readonly",
+        "https://www.googleapis.com/auth/drive.readonly",
+    ]
+    creds = Credentials.from_service_account_info(info, scopes=scopes)
+    return AuthorizedSession(creds)
+
+
+def download_gsheet_xlsx(sheet_id, dest_path):
+    """Download a Google Sheet as XLSX to dest_path. Uses service account if available,
+    otherwise falls back to anonymous public export URL."""
+    url = gsheet_xlsx_url(sheet_id)
+    session = _get_gcp_authed_session()
+    if session is not None:
+        resp = session.get(url)
+        resp.raise_for_status()
+        with open(dest_path, "wb") as f:
+            f.write(resp.content)
+    else:
+        import urllib.request
+        urllib.request.urlretrieve(url, dest_path)
+    return dest_path
 
 
 # ============================================================
