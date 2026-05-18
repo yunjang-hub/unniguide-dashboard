@@ -160,7 +160,7 @@ def format_krw(amount):
 # ============================================================
 # 데이터 로딩
 # ============================================================
-@st.cache_data(show_spinner=False, ttl=600)
+@st.cache_data(show_spinner=False, ttl=60)
 def load_operation_excel(file_path):
     """운영 트렌드 Excel → 예약완료 df + 정산 df + 전체예약 df"""
 
@@ -267,7 +267,7 @@ def load_operation_excel(file_path):
     return df_completed, df_settle, df_all
 
 
-@st.cache_data(show_spinner=False, ttl=600)
+@st.cache_data(show_spinner=False, ttl=60)
 def load_internal_report(file_path):
     """내부리포트 Excel → 월별트렌드 df, 병원별성과 df, 취소노쇼 요약 df, 취소노쇼 상세 df"""
 
