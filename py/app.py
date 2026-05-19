@@ -232,9 +232,50 @@ def load_operation_excel(file_path):
     ws2 = wb[settle_sheet]
     settlement_records = []
     current_month = None
+    col_map = {}  # 현재 월 섹션의 헤더명 → 컬럼 인덱스 (월마다 컬럼 순서가 달라질 수 있어 매번 갱신)
+
+    # 헤더명 후보 (재무팀이 표기를 살짝 바꿔도 매칭되도록 여러 변형 허용)
+    AMOUNT_KEYS = ('수술/시술 금액', '시술/수술 금액', '시술금액', '수술금액')
+    FEE_KEYS = ('수수료 금액', '수수료금액')
+    KIND_KEYS = ('수술/시술 구분', '시술/수술 구분', '구분')
+    NAME_KEYS = ('이름(고객명)', '고객명')
+    NATION_KEYS = ('국적',)
+
+    def _find_col(keys):
+        for k in keys:
+            if k in col_map:
+                return col_map[k]
+        return None
+
+    def _to_amount(v):
+        """숫자 또는 '₩3,840,000' 같은 통화 문자열을 float로 변환"""
+        if v is None or v == '':
+            return 0.0
+        if isinstance(v, (int, float)):
+            return float(v)
+        s = str(v).replace('₩', '').replace(',', '').strip()
+        try:
+            return float(s)
+        except ValueError:
+            return 0.0
+
+    def _looks_like_amount(v):
+        """이 값이 금액으로 보이는지 (재무팀 시트에서 헤더-데이터 열 어긋남 자동 보정용)"""
+        if v is None or v == '':
+            return False
+        if isinstance(v, (int, float)):
+            return v != 0
+        s = str(v).replace('₩', '').replace(',', '').strip()
+        try:
+            return float(s) != 0
+        except ValueError:
+            return False
+
     for row in ws2.iter_rows(min_row=1, max_row=ws2.max_row, values_only=False):
         vals = [c.value for c in row]
         a_val = str(vals[0]).strip() if vals[0] else ''
+
+        # 월 라벨: "2026년 4월 정산 내역"
         if '정산 내역' in a_val:
             parts = a_val.replace('년', '-').replace('월', '').replace('정산 내역', '').strip()
             try:
@@ -242,25 +283,54 @@ def load_operation_excel(file_path):
                 current_month = f"{year.strip()}-{int(month.strip()):02d}"
             except Exception:
                 pass
+            col_map = {}  # 새 월 섹션 → 헤더 재학습 필요
             continue
-        if a_val in ('NO', 'NO.', '', 'None', '재무팀 정산 요청 내역') or '정산 요청일' in a_val:
+
+        # 헤더 행: A열이 'NO' 또는 'NO.' → 컬럼 위치 학습
+        if a_val in ('NO', 'NO.'):
+            col_map = {}
+            for i, v in enumerate(vals):
+                if v is None:
+                    continue
+                col_map[str(v).strip()] = i
             continue
-        if current_month and vals[1]:
+
+        if a_val in ('', 'None', '재무팀 정산 요청 내역') or '정산 요청일' in a_val:
+            continue
+
+        if current_month and col_map and len(vals) > 1 and vals[1]:
             hospital = str(vals[1]).strip()
             if hospital in ('병원명', ''):
                 continue
-            try:
-                settlement_records.append({
-                    '정산월': current_month,
-                    '병원명': normalize_hospital(hospital),
-                    '고객명': str(vals[2]).strip() if vals[2] else '',
-                    '국적': str(vals[4]).strip() if vals[4] else '',
-                    '구분': str(vals[6]).strip() if vals[6] else '',
-                    '시술금액': float(vals[7]) if vals[7] else 0,
-                    '수수료금액': float(vals[8]) if vals[8] else 0,
-                })
-            except (ValueError, TypeError):
-                pass
+            amount_idx = _find_col(AMOUNT_KEYS)
+            fee_idx = _find_col(FEE_KEYS)
+            if amount_idx is None or fee_idx is None:
+                continue  # 헤더에서 금액/수수료 컬럼을 못 찾으면 스킵
+            kind_idx = _find_col(KIND_KEYS)
+            name_idx = _find_col(NAME_KEYS)
+            nation_idx = _find_col(NATION_KEYS)
+
+            def _get(idx):
+                if idx is None or idx >= len(vals) or vals[idx] is None:
+                    return ''
+                return str(vals[idx]).strip()
+
+            amount_val = vals[amount_idx] if amount_idx < len(vals) else None
+            kind_val = vals[kind_idx] if (kind_idx is not None and kind_idx < len(vals)) else None
+            # Self-healing: 재무팀 시트에서 가끔 '구분'과 '금액' 컬럼이 헤더-데이터 사이 swap되어 입력됨.
+            # 금액 자리가 텍스트이고 구분 자리가 숫자/통화면 둘을 바꿔 읽는다.
+            if not _looks_like_amount(amount_val) and _looks_like_amount(kind_val):
+                amount_val, kind_val = kind_val, amount_val
+
+            settlement_records.append({
+                '정산월': current_month,
+                '병원명': normalize_hospital(hospital),
+                '고객명': _get(name_idx),
+                '국적': _get(nation_idx),
+                '구분': str(kind_val).strip() if kind_val is not None else '',
+                '시술금액': _to_amount(amount_val),
+                '수수료금액': _to_amount(vals[fee_idx]) if fee_idx < len(vals) else 0.0,
+            })
     wb.close()
     df_settle = pd.DataFrame(settlement_records)
 
