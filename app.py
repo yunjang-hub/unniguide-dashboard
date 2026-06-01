@@ -664,10 +664,23 @@ with tab1:
     # --- MoM 테이블 (필터 반응) ---
     if len(m_labels) > 0:
         st.subheader("월별 성장률 (MoM)")
+        st.caption("활성 병원 수 = 그 달에 시술/수술 완료를 1건 이상 보낸 병원 수 (예약이 여러 병원에 고루 분산되는지 확인)")
+        # 월별 활성 병원 수 (예약완료 기준 고유 병원 수)
+        active_by_month = (
+            filtered_res[filtered_res['병원명'].notna()].groupby('월')['병원명'].nunique()
+            if len(filtered_res) > 0 else pd.Series(dtype=int)
+        )
         mom_data = []
         for i in range(len(m_labels)):
             row = {'월': m_labels[i], '완료건수': m_counts[i], '정산매출': m_revenues[i], '수수료': m_commissions[i]}
             row['객단가'] = m_revenues[i] / m_counts[i] if m_counts[i] > 0 else 0
+            active = int(active_by_month.get(m_labels[i], 0))
+            row['활성병원수'] = active
+            if i > 0:
+                prev_active = int(active_by_month.get(m_labels[i - 1], 0))
+                row['활성병원MoM'] = f"{active - prev_active:+d}"
+            else:
+                row['활성병원MoM'] = '-'
             if i > 0 and m_counts[i - 1] > 0:
                 row['건수MoM'] = f"{(m_counts[i] - m_counts[i-1]) / m_counts[i-1] * 100:+.1f}%"
             else:
@@ -683,8 +696,8 @@ with tab1:
         df_mom_disp['수수료'] = df_mom_disp['수수료'].apply(format_krw)
         df_mom_disp['객단가'] = df_mom_disp['객단가'].apply(format_krw)
         st.dataframe(
-            df_mom_disp[['월', '완료건수', '정산매출', '수수료', '객단가', '건수MoM', '매출MoM']].rename(columns={
-                '건수MoM': '건수 MoM', '매출MoM': '매출 MoM',
+            df_mom_disp[['월', '완료건수', '활성병원수', '활성병원MoM', '정산매출', '수수료', '객단가', '건수MoM', '매출MoM']].rename(columns={
+                '활성병원수': '활성 병원 수', '활성병원MoM': '활성병원 증감', '건수MoM': '건수 MoM', '매출MoM': '매출 MoM',
             }),
             use_container_width=True, hide_index=True,
         )
@@ -795,8 +808,17 @@ with tab3:
         fig_h.update_traces(textposition='outside')
         st.plotly_chart(fig_h, use_container_width=True)
 
-        # 최신월 수수료 계산 (정산 데이터에서)
+        # 최신월 = 정산 데이터 기준 최신월 (라벨/건수/매출/수수료 모두 이 달로 통일)
         latest_settle_month = all_months_settle[-1] if all_months_settle else None
+        # 최신월 건수/매출: 같은 달의 예약완료 기준으로 재계산 (df_hosp의 '최신월'은
+        # 예약완료 중 가장 늦은 달을 잡아 라벨과 어긋나므로 여기서 덮어씀)
+        if latest_settle_month:
+            lm_res = df_completed[df_completed['월'] == latest_settle_month].groupby('병원명').agg(
+                _건수=('실제금액', 'size'), _금액=('실제금액', 'sum')).reset_index()
+            hosp_agg = hosp_agg.drop(columns=['최신월건수', '최신월금액']).merge(
+                lm_res.rename(columns={'_건수': '최신월건수', '_금액': '최신월금액'}), on='병원명', how='left')
+            hosp_agg[['최신월건수', '최신월금액']] = hosp_agg[['최신월건수', '최신월금액']].fillna(0)
+            hosp_agg['최신월건수'] = hosp_agg['최신월건수'].astype(int)
         if latest_settle_month and len(df_settle) > 0:
             latest_comm = df_settle[df_settle['정산월'] == latest_settle_month].groupby('병원명')['수수료금액'].sum().reset_index()
             latest_comm.columns = ['병원명', '최신월수수료']
