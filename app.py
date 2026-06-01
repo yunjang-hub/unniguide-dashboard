@@ -234,18 +234,38 @@ def load_operation_excel(file_path):
             hospital = str(vals[1]).strip()
             if hospital in ('병원명', ''):
                 continue
-            try:
-                settlement_records.append({
-                    '정산월': current_month,
-                    '병원명': normalize_hospital(hospital),
-                    '고객명': str(vals[2]).strip() if vals[2] else '',
-                    '국적': str(vals[4]).strip() if vals[4] else '',
-                    '구분': str(vals[6]).strip() if vals[6] else '',
-                    '시술금액': float(vals[7]) if vals[7] else 0,
-                    '수수료금액': float(vals[8]) if vals[8] else 0,
-                })
-            except (ValueError, TypeError):
-                pass
+
+            def _to_num(v):
+                if v is None or v == '':
+                    return None
+                if isinstance(v, (int, float)):
+                    return float(v)
+                try:
+                    return float(str(v).replace('₩', '').replace(',', '').strip())
+                except ValueError:
+                    return None
+
+            # 구분(시술/수술 텍스트)과 시술금액(숫자) 칸이 일부 월에서 바뀌어 입력됨
+            # → 숫자인 칸 = 금액, 텍스트인 칸 = 구분 으로 자동 판별
+            c6, c7 = vals[6], vals[7]
+            n6, n7 = _to_num(c6), _to_num(c7)
+            if n6 is not None and n7 is None:
+                amount, kind = n6, str(c7).strip() if c7 else ''
+            elif n7 is not None and n6 is None:
+                amount, kind = n7, str(c6).strip() if c6 else ''
+            else:
+                # 판별 불가 시 헤더 순서(구분=6, 금액=7) 사용
+                amount = n7 if n7 is not None else 0
+                kind = str(c6).strip() if c6 else ''
+            settlement_records.append({
+                '정산월': current_month,
+                '병원명': normalize_hospital(hospital),
+                '고객명': str(vals[2]).strip() if vals[2] else '',
+                '국적': str(vals[4]).strip() if vals[4] else '',
+                '구분': kind,
+                '시술금액': amount,
+                '수수료금액': _to_num(vals[8]) or 0,
+            })
     wb.close()
     df_settle = pd.DataFrame(settlement_records)
 
