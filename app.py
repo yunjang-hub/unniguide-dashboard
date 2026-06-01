@@ -252,88 +252,126 @@ def load_operation_excel(file_path):
     return df_completed, df_settle, df_all
 
 
-@st.cache_data(show_spinner=False, ttl=600)
-def load_internal_report(file_path):
-    """내부리포트 Excel → 월별트렌드 df, 병원별성과 df, 취소노쇼 요약 df, 취소노쇼 상세 df"""
+def _agg_month_series(df):
+    """집계용 월(YYYY-MM): 내원일 기준, 없으면 예약확정일로 보완."""
+    m = pd.to_datetime(df['내원일'], errors='coerce')
+    if '예약확정일' in df.columns:
+        m = m.fillna(pd.to_datetime(df['예약확정일'], errors='coerce'))
+    return m.dt.to_period('M').astype(str)
 
-    if str(file_path).startswith('http'):
-        import urllib.request
-        tmp = '/tmp/unniguide_gsheet_ir.xlsx'
-        urllib.request.urlretrieve(file_path, tmp)
-        file_path = tmp
 
-    # 월별 트렌드
-    df_monthly = pd.read_excel(file_path, sheet_name='월별 트렌드', header=None, skiprows=3)
-    df_monthly.columns = ['월', '완료건수', '시술건수', '수술건수', '시수술금액', '수수료매출', '평균객단가', '취소노쇼']
-    df_monthly = df_monthly.dropna(subset=['월'])
-    # 헤더 행 제거 (숫자로 변환 불가능한 행)
-    df_monthly = df_monthly[pd.to_numeric(df_monthly['완료건수'], errors='coerce').notna()].copy()
+def _commission(amount, kind):
+    """수수료 = 시술 10% / 수술 20% (그 외 0). fill_settlement.py 규칙과 동일."""
+    kind = str(kind).strip()
+    if kind == '시술':
+        return float(amount) * 0.10
+    if kind == '수술':
+        return float(amount) * 0.20
+    return 0.0
+
+
+def load_internal_report(df_completed, df_all, df_settle):
+    """예약확정 raw에서 월별트렌드/병원별성과/취소노쇼 요약·상세를 직접 계산.
+    (기존: 내부리포트 시트를 읽음 → 현재: raw에서 자동 집계, 별도 시트 불필요)"""
+
+    comp = df_completed.copy()
+    comp['_월'] = _agg_month_series(comp)
+    comp['_수수료'] = comp.apply(lambda r: _commission(r['실제금액'], r['종류']), axis=1)
+    comp['_시술'] = (comp['종류'] == '시술').astype(int)
+    comp['_수술'] = (comp['종류'] == '수술').astype(int)
+    comp_v = comp[comp['_월'] != 'NaT'].copy()
+
+    # 취소/노쇼 마스크 (전체 예약 기준)
+    allr = df_all.copy()
+    allr['_월'] = _agg_month_series(allr)
+    status = allr['예약상태'].fillna('').astype(str).str.strip()
+    is_cancel = status == '예약 취소'
+    is_noshow = status.str.lower().str.contains('no-show|no show|noshow', na=False, regex=True)
+    is_completed = status == '시/수술 완료'
+
+    # ---------- 1) 월별 트렌드 ----------
+    if len(comp_v) > 0:
+        g = comp_v.groupby('_월')
+        df_monthly = pd.DataFrame({
+            '월': list(g.groups.keys()),
+            '완료건수': g.size().values,
+            '시술건수': g['_시술'].sum().values,
+            '수술건수': g['_수술'].sum().values,
+            '시수술금액': g['실제금액'].sum().values,
+            '수수료매출': g['_수수료'].sum().values,
+        })
+    else:
+        df_monthly = pd.DataFrame(columns=['월', '완료건수', '시술건수', '수술건수', '시수술금액', '수수료매출'])
+    # 월별 취소+노쇼
+    cn = allr[(is_cancel | is_noshow) & (allr['_월'] != 'NaT')]
+    cn_by_month = cn.groupby('_월').size() if len(cn) > 0 else pd.Series(dtype=int)
+    df_monthly['취소노쇼'] = df_monthly['월'].map(cn_by_month).fillna(0)
+    df_monthly['평균객단가'] = (df_monthly['시수술금액'] / df_monthly['완료건수'].replace(0, pd.NA)).fillna(0)
+    df_monthly = df_monthly.sort_values('월').reset_index(drop=True)
     for col in ['완료건수', '시술건수', '수술건수', '시수술금액', '수수료매출', '평균객단가', '취소노쇼']:
         df_monthly[col] = pd.to_numeric(df_monthly[col], errors='coerce').fillna(0)
 
-    # 병원별 성과
-    df_hosp = pd.read_excel(file_path, sheet_name='병원별 성과', header=None, skiprows=3)
-    df_hosp.columns = ['순위', '병원명', '누적건수', '누적시수술금액', '누적수수료', '최신월건수', '최신월금액', '전월대비']
-    df_hosp = df_hosp.dropna(subset=['병원명'])
-    df_hosp = df_hosp[pd.to_numeric(df_hosp['누적건수'], errors='coerce').notna()].copy()
-    for col in ['누적건수', '누적시수술금액', '누적수수료', '최신월건수', '최신월금액', '전월대비']:
-        df_hosp[col] = pd.to_numeric(df_hosp[col], errors='coerce').fillna(0)
-    df_hosp['병원명'] = df_hosp['병원명'].apply(normalize_hospital)
+    # ---------- 2) 병원별 성과 (누적) ----------
+    comp_h = comp[comp['병원명'].notna()].copy()
+    if len(comp_h) > 0:
+        hg = comp_h.groupby('병원명')
+        df_hosp = pd.DataFrame({
+            '병원명': list(hg.groups.keys()),
+            '누적건수': hg.size().values,
+            '누적시수술금액': hg['실제금액'].sum().values,
+            '누적수수료': hg['_수수료'].sum().values,
+        })
+        # 최신월 (집계 가능한 월 중 최댓값)
+        valid_months = comp_h[comp_h['_월'] != 'NaT']['_월']
+        latest = valid_months.max() if len(valid_months) > 0 else None
+        if latest:
+            lm = comp_h[comp_h['_월'] == latest].groupby('병원명').agg(
+                최신월건수=('실제금액', 'size'), 최신월금액=('실제금액', 'sum')).reset_index()
+            df_hosp = df_hosp.merge(lm, on='병원명', how='left')
+        else:
+            df_hosp['최신월건수'] = 0
+            df_hosp['최신월금액'] = 0
+        df_hosp[['최신월건수', '최신월금액']] = df_hosp[['최신월건수', '최신월금액']].fillna(0)
+        df_hosp['전월대비'] = 0.0
+        df_hosp = df_hosp.sort_values('누적시수술금액', ascending=False).reset_index(drop=True)
+        df_hosp['순위'] = range(1, len(df_hosp) + 1)
+        df_hosp = df_hosp[['순위', '병원명', '누적건수', '누적시수술금액', '누적수수료', '최신월건수', '최신월금액', '전월대비']]
+    else:
+        df_hosp = pd.DataFrame(columns=['순위', '병원명', '누적건수', '누적시수술금액', '누적수수료', '최신월건수', '최신월금액', '전월대비'])
 
-    # 취소/노쇼 트래킹
-    df_cancel_raw = pd.read_excel(file_path, sheet_name='취소 노쇼 트래킹', header=None)
-
-    # 전체 요약 (row 4)
-    total_cancel = df_cancel_raw.iloc[4, 1] if len(df_cancel_raw) > 4 else 0
-    total_noshow = df_cancel_raw.iloc[4, 3] if len(df_cancel_raw) > 4 else 0
-    cancel_rate = df_cancel_raw.iloc[4, 5] if len(df_cancel_raw) > 4 else ''
-
+    # ---------- 3) 취소/노쇼 요약 ----------
+    total_cancel = int(is_cancel.sum())
+    total_noshow = int(is_noshow.sum())
+    denom = int((is_completed | is_cancel | is_noshow).sum())
+    rate = ((total_cancel + total_noshow) / denom * 100) if denom > 0 else 0
     cancel_summary = {
-        'total_cancel': int(total_cancel) if pd.notna(total_cancel) else 0,
-        'total_noshow': int(total_noshow) if pd.notna(total_noshow) else 0,
-        'cancel_rate': str(cancel_rate),
+        'total_cancel': total_cancel,
+        'total_noshow': total_noshow,
+        'cancel_rate': f"{rate:.1f}%",
     }
 
-    # 병원별 취소/노쇼 (row 10~)
-    cancel_hospital_rows = []
-    for idx in range(11, len(df_cancel_raw)):
-        row = df_cancel_raw.iloc[idx]
-        hospital = row[0]
-        if pd.isna(hospital) or str(hospital).strip() == '':
-            break
-        cancel_hospital_rows.append({
-            '병원명': normalize_hospital(str(hospital).strip()),
-            '전체예약': int(row[1]) if pd.notna(row[1]) else 0,
-            '취소': int(row[2]) if pd.notna(row[2]) else 0,
-            'No-show': int(row[3]) if pd.notna(row[3]) else 0,
-            '취소노쇼율': float(row[4]) if pd.notna(row[4]) else 0,
-        })
-    df_cancel_hospital = pd.DataFrame(cancel_hospital_rows)
+    # ---------- 4) 병원별 취소/노쇼 ----------
+    allr['_취소'] = is_cancel.astype(int)
+    allr['_노쇼'] = is_noshow.astype(int)
+    allr['_유효'] = (is_completed | is_cancel | is_noshow).astype(int)
+    ch = allr[allr['병원명'].notna()].groupby('병원명').agg(
+        전체예약=('_유효', 'sum'), 취소=('_취소', 'sum'), **{'No-show': ('_노쇼', 'sum')}).reset_index()
+    ch = ch[(ch['취소'] + ch['No-show']) > 0].copy()
+    ch['취소노쇼율'] = ((ch['취소'] + ch['No-show']) / ch['전체예약'].replace(0, pd.NA)).fillna(0)
+    df_cancel_hospital = ch[['병원명', '전체예약', '취소', 'No-show', '취소노쇼율']].reset_index(drop=True)
 
-    # 상세 내역 (row 36~)
-    detail_start = None
-    for idx in range(30, len(df_cancel_raw)):
-        val = df_cancel_raw.iloc[idx, 0]
-        if pd.notna(val) and '월' == str(val).strip():
-            detail_start = idx + 1
-            break
-
-    cancel_details = []
-    if detail_start:
-        for idx in range(detail_start, len(df_cancel_raw)):
-            row = df_cancel_raw.iloc[idx]
-            if pd.isna(row[0]):
-                continue
-            cancel_details.append({
-                '월': str(row[0]).strip(),
-                '상태': str(row[1]).strip() if pd.notna(row[1]) else '',
-                '병원명': normalize_hospital(str(row[2]).strip()) if pd.notna(row[2]) else '',
-                '국적': str(row[3]).strip() if pd.notna(row[3]) else '',
-                '고객명': str(row[4]).strip() if pd.notna(row[4]) else '',
-                '종류': str(row[5]).strip() if pd.notna(row[5]) else '',
-                '시술수술명': str(row[6]).strip() if pd.notna(row[6]) else '',
-            })
-    df_cancel_detail = pd.DataFrame(cancel_details)
+    # ---------- 5) 취소/노쇼 상세 ----------
+    det = allr[is_cancel | is_noshow].copy()
+    df_cancel_detail = pd.DataFrame({
+        '월': det['_월'].values,
+        '상태': status[is_cancel | is_noshow].values,
+        '병원명': det['병원명'].values,
+        '국적': det['고객국적'].values if '고객국적' in det.columns else '',
+        '고객명': det['고객명'].values if '고객명' in det.columns else '',
+        '종류': det['종류'].values if '종류' in det.columns else '',
+        '시술수술명': det['시술수술명'].values if '시술수술명' in det.columns else '',
+    })
+    df_cancel_detail['병원명'] = df_cancel_detail['병원명'].fillna('')
 
     return df_monthly, df_hosp, cancel_summary, df_cancel_hospital, df_cancel_detail
 
@@ -341,8 +379,8 @@ def load_internal_report(file_path):
 # ============================================================
 # Google Sheets 설정
 # ============================================================
-GSHEET_ID_MAIN = "1pNQiaK67nz6FhxssxgWvoiQr6YwT-5MCwDVvqUZW1SY"
-GSHEET_ID_REPORT = "16xOwlg8nptwbdM3uvbhr012v77xECiUIgy6wKjT5QYI"
+# 통합 운영 시트 (예약확정 리스트 + 정산 요청 리스트). 내부리포트는 이 raw에서 자동 계산됨.
+GSHEET_ID_MAIN = "1MNG3lIL2P-DIydra7vatnaKUq8MLKI0xm9YSiD8uYFk"
 GID_RESERVATION = 123775075   # 예약확정 시트
 GID_SETTLEMENT = 622724794    # 내부리포트 (정산 포함)
 GID_OFFLINE = 1126075757      # 오프라인 데일리
@@ -389,12 +427,12 @@ with st.sidebar:
             st.error(f"운영 데이터 로드 실패: {str(e)[:50]}")
 
         try:
-            with st.spinner("내부리포트 로딩 중..."):
-                xlsx_url2 = gsheet_xlsx_url(GSHEET_ID_REPORT)
-                df_monthly, df_hosp_perf, cancel_summary, df_cancel_hospital, df_cancel_detail = load_internal_report(xlsx_url2)
-            st.success("내부리포트 로드 완료")
+            if df_completed is not None:
+                with st.spinner("내부리포트 집계 중..."):
+                    df_monthly, df_hosp_perf, cancel_summary, df_cancel_hospital, df_cancel_detail = load_internal_report(df_completed, df_all, df_settle)
+                st.success("내부리포트 집계 완료")
         except Exception as e:
-            st.warning(f"내부리포트 로드 실패: {str(e)[:50]}")
+            st.warning(f"내부리포트 집계 실패: {str(e)[:50]}")
 
     else:
         # 로컬 파일 모드 (기존 방식)
@@ -416,23 +454,10 @@ with st.sidebar:
                 with st.spinner("운영 데이터 로딩..."):
                     df_completed, df_settle, df_all = load_operation_excel(tmp)
 
-        st.markdown("**2. 내부 리포트**")
-        pattern2 = os.path.expanduser('~/Downloads/언니가이드_내부리포트_*.xlsx')
-        pattern2b = os.path.expanduser('~/Desktop/언니가이드_리포트/언니가이드_내부리포트_*.xlsx')
-        ir_candidates = sorted(glob.glob(pattern2) + glob.glob(pattern2b), key=os.path.getmtime, reverse=True)
-
-        if ir_candidates:
-            ir_file = st.selectbox("내부리포트 Excel", ir_candidates, format_func=os.path.basename, key="ir")
-            with st.spinner("내부리포트 로딩..."):
-                df_monthly, df_hosp_perf, cancel_summary, df_cancel_hospital, df_cancel_detail = load_internal_report(ir_file)
-        else:
-            ir_upload = st.file_uploader("내부리포트 Excel 업로드", type=['xlsx'], key="ir_up")
-            if ir_upload:
-                tmp2 = "/tmp/unniguide_ir.xlsx"
-                with open(tmp2, "wb") as f:
-                    f.write(ir_upload.getvalue())
-                with st.spinner("내부리포트 로딩..."):
-                    df_monthly, df_hosp_perf, cancel_summary, df_cancel_hospital, df_cancel_detail = load_internal_report(tmp2)
+        # 내부 리포트: 운영 데이터(raw)에서 자동 계산 (별도 파일 불필요)
+        if df_completed is not None:
+            with st.spinner("내부리포트 집계..."):
+                df_monthly, df_hosp_perf, cancel_summary, df_cancel_hospital, df_cancel_detail = load_internal_report(df_completed, df_all, df_settle)
 
 # ============================================================
 # 데이터 없으면 안내
