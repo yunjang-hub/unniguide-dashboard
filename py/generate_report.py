@@ -288,15 +288,44 @@ if _res_sheet is None:
     print(f"❌ 예약확정 시트를 찾을 수 없습니다. 시트 목록: {_xls.sheet_names}")
     sys.exit(1)
 print(f"  📋 예약 시트: {_res_sheet}")
-df_res = pd.read_excel(EXCEL_PATH, sheet_name=_res_sheet, header=1)
-df_res.columns = [
-    'NO', '채팅접수일자', '예약확정일', '담당자', '고객명', '그룹여부',
-    '고객국적', '사용언어', '예약상태', '통역서비스요청', '종류',
-    '시술수술명', '추천클리닉', '예약클리닉', '내원일', '시간',
-    '예상금액', '실제금액', '금액확인', '설문발송여부',
-    '후기작성여부', '캐시백지급대상자', '캐시백지급여부', '캐시백금액',
-    '캐시백지급일자', 'Remark', '시술수술확정항목'
-] + [f'extra_{i}' for i in range(max(0, len(df_res.columns) - 27))]
+# 헤더 행 자동 탐지 + 이름 기반 컬럼 매핑 (시트 컬럼 순서/헤더 위치 변동에 robust)
+def _norm_header(c):
+    return str(c).replace(' ', '').replace('\n', '').strip()
+
+_raw_head = pd.read_excel(EXCEL_PATH, sheet_name=_res_sheet, header=None, nrows=5)
+_header_idx = None
+for _i in range(len(_raw_head)):
+    _vals = [_norm_header(v) for v in _raw_head.iloc[_i].tolist()]
+    if any('예약상태' in v for v in _vals) and any('고객명' in v for v in _vals):
+        _header_idx = _i
+        break
+if _header_idx is None:
+    _header_idx = 1  # 과거 포맷 fallback
+
+df_res = pd.read_excel(EXCEL_PATH, sheet_name=_res_sheet, header=_header_idx)
+_name_map = [  # (표준명, 매칭 키워드) — 순서 중요: 구체적인 것 먼저
+    ('시술수술명', '시술/수술명'), ('시술수술명', '시술수술명'),
+    ('예약클리닉', '예약클리닉'), ('추천클리닉', '추천클리닉'),
+    ('예약상태', '예약상태'), ('고객국적', '고객국적'),
+    ('실제금액', '실제금액'), ('예상금액', '예상금액'),
+    ('내원일', '내원일'), ('예약확정일', '예약확정일'),
+    ('채팅접수일자', '채팅접수일자'), ('사용언어', '사용언어'),
+    ('고객명', '고객명'), ('종류', '종류'), ('시간', '시간'),
+]
+_rename, _used = {}, set()
+for _col in df_res.columns:
+    _n = _norm_header(_col)
+    for _std, _key in _name_map:
+        if _std not in _used and _key in _n:
+            _rename[_col] = _std
+            _used.add(_std)
+            break
+df_res = df_res.rename(columns=_rename)
+
+_missing = [c for c in ['예약상태', '예약클리닉', '고객국적', '내원일', '실제금액', '종류', '시술수술명', '고객명'] if c not in df_res.columns]
+if _missing:
+    print(f"❌ 예약확정 시트에서 필수 컬럼을 찾을 수 없습니다: {_missing} (헤더 행 {_header_idx + 1}행 기준)")
+    sys.exit(1)
 
 df_res['병원명'] = df_res['예약클리닉'].apply(normalize_hospital)
 df_res['내원일'] = pd.to_datetime(df_res['내원일'], errors='coerce')

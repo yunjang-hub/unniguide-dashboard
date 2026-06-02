@@ -181,17 +181,44 @@ def load_operation_excel(file_path):
             break
     if res_sheet is None:
         raise ValueError(f"예약확정 시트를 찾을 수 없습니다. 시트 목록: {xls.sheet_names}")
-    df_res = pd.read_excel(file_path, sheet_name=res_sheet, header=1)
-    expected_cols = [
-        'NO', '채팅접수일자', '예약확정일', '담당자', '고객명', '그룹여부',
-        '고객국적', '사용언어', '예약상태', '통역서비스요청', '종류',
-        '시술수술명', '추천클리닉', '예약클리닉', '내원일', '시간',
-        '예상금액', '실제금액', '금액확인', '설문발송여부',
-        '후기작성여부', '캐시백지급대상자', '캐시백지급여부', '캐시백금액',
-        '캐시백지급일자', 'Remark', '시술수술확정항목',
+    # 헤더 행 자동 탐지 + 이름 기반 컬럼 매핑 (시트 컬럼 순서/헤더 위치 변동에 robust)
+    def _norm_header(c):
+        return str(c).replace(' ', '').replace('\n', '').strip()
+
+    raw_head = pd.read_excel(file_path, sheet_name=res_sheet, header=None, nrows=5)
+    header_idx = None
+    for i in range(len(raw_head)):
+        vals = [_norm_header(v) for v in raw_head.iloc[i].tolist()]
+        if any('예약상태' in v for v in vals) and any('고객명' in v for v in vals):
+            header_idx = i
+            break
+    if header_idx is None:
+        header_idx = 1  # 과거 포맷 fallback
+
+    df_res = pd.read_excel(file_path, sheet_name=res_sheet, header=header_idx)
+    name_map = [  # (표준명, 매칭 키워드) — 순서 중요: 구체적인 것 먼저
+        ('시술수술명', '시술/수술명'), ('시술수술명', '시술수술명'),
+        ('예약클리닉', '예약클리닉'), ('추천클리닉', '추천클리닉'),
+        ('예약상태', '예약상태'), ('고객국적', '고객국적'),
+        ('실제금액', '실제금액'), ('예상금액', '예상금액'),
+        ('내원일', '내원일'), ('예약확정일', '예약확정일'),
+        ('채팅접수일자', '채팅접수일자'), ('사용언어', '사용언어'),
+        ('고객명', '고객명'), ('종류', '종류'), ('시간', '시간'),
     ]
-    actual_cols = expected_cols + [f'extra_{i}' for i in range(max(0, len(df_res.columns) - len(expected_cols)))]
-    df_res.columns = actual_cols[:len(df_res.columns)]
+    rename, used = {}, set()
+    for col in df_res.columns:
+        n = _norm_header(col)
+        for std, key in name_map:
+            if std not in used and key in n:
+                rename[col] = std
+                used.add(std)
+                break
+    df_res = df_res.rename(columns=rename)
+
+    required = ['예약상태', '예약클리닉', '고객국적', '내원일', '실제금액', '종류', '시술수술명']
+    missing = [c for c in required if c not in df_res.columns]
+    if missing:
+        raise ValueError(f"예약확정 시트에서 필수 컬럼을 찾을 수 없습니다: {missing} (헤더 행 {header_idx + 1}행 기준)")
     df_res['병원명'] = df_res['예약클리닉'].apply(normalize_hospital)
     df_res['내원일'] = pd.to_datetime(df_res['내원일'], errors='coerce')
     df_res['월'] = df_res['내원일'].dt.to_period('M').astype(str)
