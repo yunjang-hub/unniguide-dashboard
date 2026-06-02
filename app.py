@@ -878,6 +878,146 @@ with tab3:
         if top1:
             st.dataframe(pd.DataFrame(top1), use_container_width=True, hide_index=True)
 
+    # ============================================================
+    # 병원 개별 리포트 (병원별 트렌드 리포트와 동일한 내용)
+    # ============================================================
+    st.divider()
+    st.subheader("🏥 병원 개별 리포트")
+    st.caption("병원을 선택하면 해당 병원에 제공하는 트렌드 리포트와 동일한 내용을 한 번에 볼 수 있어요.")
+
+    # 누적 매출 순으로 병원 정렬 → 선택 박스 (상위 병원이 먼저)
+    _rev_rank = df_completed[df_completed['병원명'].notna()].groupby('병원명')['실제금액'].sum().sort_values(ascending=False)
+    _hosp_options = list(_rev_rank.index) + [h for h in all_hospitals if h not in _rev_rank.index]
+    if _hosp_options:
+        rep_hosp = st.selectbox("병원 선택", _hosp_options, key="hosp_report_pick")
+
+        hc = df_completed[df_completed['병원명'] == rep_hosp].copy()
+        hs = df_settle[df_settle['병원명'] == rep_hosp].copy() if len(df_settle) > 0 else pd.DataFrame(columns=['정산월', '시술금액', '수수료금액'])
+        hc_months = sorted([m for m in hc['월'].unique() if m and m != 'NaT'])
+        hs_months = sorted([m for m in hs['정산월'].unique()]) if len(hs) > 0 else []
+
+        if len(hc) == 0 and len(hs) == 0:
+            st.info("선택한 병원의 데이터가 없습니다.")
+        else:
+            ref_month = hc_months[-1] if hc_months else (hs_months[-1] if hs_months else None)
+
+            # --- 헤더: 순위 + 누적 요약 ---
+            total_h = len(_rev_rank)
+            rank = list(_rev_rank.index).index(rep_hosp) + 1 if rep_hosp in _rev_rank.index else None
+            cum_cnt, cum_rev = len(hc), hc['실제금액'].sum()
+            cum_comm = hs['수수료금액'].sum() if len(hs) > 0 else 0
+            rank_txt = f" · 전체 {total_h}개 병원 중 누적 매출 **{rank}위**" if rank else ""
+            if rank and rank <= max(1, int(total_h * 0.2)):
+                rank_txt += " 🏆 **TOP 20%**"
+            st.markdown(f"### {rep_hosp}{rank_txt}")
+            s1, s2, s3 = st.columns(3)
+            s1.metric("누적 완료 건수", f"{cum_cnt:,}건")
+            s2.metric("누적 매출", format_krw(cum_rev))
+            s3.metric("누적 수수료", format_krw(cum_comm))
+
+            # --- 기준월 성과 (MoM) ---
+            if ref_month:
+                st.markdown(f"#### 📊 {ref_month} 성과")
+                cur = hc[hc['월'] == ref_month]
+                cur_cnt, cur_rev = len(cur), cur['실제금액'].sum()
+                cur_comm = hs[hs['정산월'] == ref_month]['수수료금액'].sum() if len(hs) > 0 else 0
+                aov = cur_rev / cur_cnt if cur_cnt else 0
+                # 전월
+                idx = hc_months.index(ref_month) if ref_month in hc_months else -1
+                prev_month = hc_months[idx - 1] if idx > 0 else None
+                d_cnt = d_rev = None
+                if prev_month:
+                    p = hc[hc['월'] == prev_month]
+                    pc, pr = len(p), p['실제금액'].sum()
+                    if pc > 0:
+                        d_cnt = f"{(cur_cnt - pc) / pc * 100:+.1f}% vs 전월"
+                    if pr > 0:
+                        d_rev = f"{(cur_rev - pr) / pr * 100:+.1f}% vs 전월"
+                k1, k2, k3, k4 = st.columns(4)
+                k1.metric("완료 건수", f"{cur_cnt}건", delta=d_cnt)
+                k2.metric("매출", format_krw(cur_rev), delta=d_rev)
+                k3.metric("수수료", format_krw(cur_comm))
+                k4.metric("객단가", format_krw(aov))
+
+            # --- 월별 추이 ---
+            st.markdown("#### 📈 월별 추이")
+            mc = hc[hc['월'] != 'NaT'].groupby('월').agg(완료건수=('실제금액', 'size'), 매출=('실제금액', 'sum'))
+            ms = hs.groupby('정산월').agg(수수료=('수수료금액', 'sum')) if len(hs) > 0 else pd.DataFrame()
+            all_m = sorted(set(mc.index) | set(ms.index))
+            trows, cumc = [], 0
+            for m in all_m:
+                c = int(mc.loc[m, '완료건수']) if m in mc.index else 0
+                r = float(mc.loc[m, '매출']) if m in mc.index else 0.0
+                comm = float(ms.loc[m, '수수료']) if (len(ms) > 0 and m in ms.index) else 0.0
+                cumc += c
+                trows.append({'월': m, '완료건수': c, '매출': r, '수수료': comm, '누적건수': cumc})
+            tdf = pd.DataFrame(trows)
+            if len(tdf) > 0:
+                fig_ph = go.Figure()
+                fig_ph.add_trace(go.Bar(x=tdf['월'], y=tdf['완료건수'], name='완료 건수', marker_color=BRAND_ORANGE, opacity=0.85, text=tdf['완료건수'], textposition='outside'))
+                fig_ph.add_trace(go.Scatter(x=tdf['월'], y=tdf['매출'], name='매출', yaxis='y2', line=dict(color=BRAND_PLUM, width=2.5), mode='lines+markers'))
+                fig_ph.update_layout(
+                    yaxis=dict(title="완료 건수"), yaxis2=dict(title="매출(원)", overlaying='y', side='right'),
+                    height=380, margin=dict(t=30, b=80), legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5),
+                )
+                st.plotly_chart(fig_ph, use_container_width=True)
+                # 표 + MoM
+                disp_t = tdf.copy()
+                disp_t['건수MoM'] = ['-'] + [f"{(tdf['완료건수'][i] - tdf['완료건수'][i-1]) / tdf['완료건수'][i-1] * 100:+.1f}%" if tdf['완료건수'][i-1] > 0 else '-' for i in range(1, len(tdf))]
+                disp_t['매출MoM'] = ['-'] + [f"{(tdf['매출'][i] - tdf['매출'][i-1]) / tdf['매출'][i-1] * 100:+.1f}%" if tdf['매출'][i-1] > 0 else '-' for i in range(1, len(tdf))]
+                disp_t['매출'] = disp_t['매출'].apply(format_krw)
+                disp_t['수수료'] = disp_t['수수료'].apply(format_krw)
+                disp_t = disp_t[['월', '완료건수', '매출', '수수료', '누적건수', '건수MoM', '매출MoM']].rename(columns={'건수MoM': '건수 MoM', '매출MoM': '매출 MoM'})
+                st.dataframe(disp_t, use_container_width=True, hide_index=True)
+
+            # --- 국적 분포 (기준월, 없으면 누적) ---
+            nat_src = hc[hc['월'] == ref_month] if (ref_month and len(hc[hc['월'] == ref_month]) > 0) else hc
+            nat_label = ref_month if (ref_month and len(hc[hc['월'] == ref_month]) > 0) else '누적'
+            natg = nat_src[nat_src['고객국적'].astype(str).str.strip().replace('nan', '') != ''].groupby('고객국적').agg(
+                건수=('실제금액', 'size'), 매출=('실제금액', 'sum')).sort_values('매출', ascending=False).reset_index()
+            if len(natg) > 0:
+                st.markdown(f"#### 🌏 고객 국적 분포 ({nat_label})")
+                natg['객단가'] = (natg['매출'] / natg['건수']).round(0)
+                cc1, cc2 = st.columns([1, 1])
+                with cc1:
+                    fig_n = px.bar(natg.head(8).sort_values('건수'), x='건수', y='고객국적', orientation='h', color_discrete_sequence=[BRAND_PLUM], text='건수')
+                    fig_n.update_layout(height=max(280, len(natg.head(8)) * 36), margin=dict(l=80, t=20, b=20), yaxis_title="")
+                    fig_n.update_traces(textposition='outside')
+                    st.plotly_chart(fig_n, use_container_width=True)
+                with cc2:
+                    nd = natg.head(10).copy()
+                    nd['매출'] = nd['매출'].apply(format_krw)
+                    nd['객단가'] = nd['객단가'].apply(format_krw)
+                    st.dataframe(nd.rename(columns={'고객국적': '국적'}), use_container_width=True, hide_index=True, height=360)
+
+            # --- 인기 시술 (누적) + 성장 기회 ---
+            cg1, cg2 = st.columns([1, 1])
+            with cg1:
+                st.markdown("#### 💉 인기 시술 (누적)")
+                proc_cnt = {}
+                for txt in hc['시술수술명']:
+                    for p in extract_procedures(txt):
+                        proc_cnt[p] = proc_cnt.get(p, 0) + 1
+                if proc_cnt:
+                    pdf = pd.DataFrame(sorted(proc_cnt.items(), key=lambda x: -x[1])[:10], columns=['시술', '건수'])
+                    st.dataframe(pdf, use_container_width=True, hide_index=True, height=360)
+                else:
+                    st.caption("시술 데이터 없음")
+            with cg2:
+                st.markdown("#### 🚀 성장 기회")
+                plat = {}
+                for txt in df_completed['시술수술명']:
+                    for p in extract_procedures(txt):
+                        plat[p] = plat.get(p, 0) + 1
+                plat_top = [p for p, _ in sorted(plat.items(), key=lambda x: -x[1])[:12]]
+                hosp_proc_set = set(proc_cnt.keys())
+                opps = [p for p in plat_top if p not in hosp_proc_set][:5]
+                if opps:
+                    st.info("**언니가이드 전체 인기 시술 중 귀원이 아직 적극적으로 하지 않는 시술:**\n\n" + "  ·  ".join(opps) + "\n\n→ 이 시술들을 강화하면 유입 확대 여지가 있어요.")
+                else:
+                    st.success("전체 인기 시술을 대부분 보유하고 있어요 👍")
+            st.caption("※ 카톡/이메일로 보낼 공식 HTML 리포트는 '리포트 생성' 탭에서 받을 수 있어요.")
+
 
 # ============================================================
 # Tab 4: 시술 트렌드
