@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 언니가이드 인터랙티브 대시보드 (Streamlit) v2
-- 운영 트렌드 Excel + 내부리포트 Excel 2개 소스
+- 원천 2개를 내원일 기준으로 이어붙임: ~2026-06 운영시트 / 2026-07~ 어드민 case-metrics
+- 내부리포트/정산은 raw에서 자동 집계
 - 취소/노쇼 트래킹 포함
 """
 
@@ -16,6 +17,15 @@ import io
 import glob
 from collections import defaultdict
 from datetime import datetime
+
+from admin_source import (
+    ADMIN_CUTOFF_MONTH,
+    ADMIN_HOSPITAL_ALIASES,
+    ADMIN_SHEET_KEYWORD,
+    SHEET_HOSPITAL_ALIASES,
+    load_admin_case_metrics,
+    normalize_admin_frame,
+)
 
 # ============================================================
 # 페이지 설정
@@ -82,6 +92,11 @@ NAME_NORMALIZE = {
     '홍대셀레나': '홍대셀레나의원',
     '히트성형외과': '히트성형외과의원',
 }
+
+# 어드민 표기(20종) + 운영시트 내부 중복 표기를 같은 정규명으로 흡수.
+# 두 원천을 이어붙일 때 같은 병원이 두 줄로 갈라지는 것을 막는다.
+NAME_NORMALIZE.update(SHEET_HOSPITAL_ALIASES)
+NAME_NORMALIZE.update(ADMIN_HOSPITAL_ALIASES)
 
 COUNTRY_FLAG = {
     '태국': '🇹🇭', '대만': '🇹🇼', '중국': '🇨🇳', '미국': '🇺🇸',
@@ -160,6 +175,23 @@ def format_krw(amount):
 # ============================================================
 # 데이터 로딩
 # ============================================================
+def finalize_reservations(df_res, source):
+    """예약 raw(운영시트/어드민 공통)에 파생 컬럼을 붙인다.
+
+    두 원천이 같은 타입·같은 표기로 정규화되어야 이어붙였을 때 집계가 깨지지 않는다.
+    """
+    df_res = df_res.copy()
+    df_res['병원명'] = df_res['예약클리닉'].apply(normalize_hospital)
+    df_res['내원일'] = pd.to_datetime(df_res['내원일'], errors='coerce')
+    df_res['월'] = df_res['내원일'].dt.to_period('M').astype(str)
+    df_res['실제금액'] = pd.to_numeric(df_res['실제금액'], errors='coerce').fillna(0)
+    for col in ('고객국적', '종류', '시술수술명', '예약상태'):
+        df_res[col] = df_res[col].apply(lambda x: str(x).strip() if pd.notna(x) else '')
+    if '_source' not in df_res.columns:
+        df_res['_source'] = source
+    return df_res
+
+
 @st.cache_data(show_spinner=False, ttl=600)
 def load_operation_excel(file_path):
     """운영 트렌드 Excel → 예약완료 df + 정산 df + 전체예약 df"""
@@ -219,14 +251,7 @@ def load_operation_excel(file_path):
     missing = [c for c in required if c not in df_res.columns]
     if missing:
         raise ValueError(f"예약확정 시트에서 필수 컬럼을 찾을 수 없습니다: {missing} (헤더 행 {header_idx + 1}행 기준)")
-    df_res['병원명'] = df_res['예약클리닉'].apply(normalize_hospital)
-    df_res['내원일'] = pd.to_datetime(df_res['내원일'], errors='coerce')
-    df_res['월'] = df_res['내원일'].dt.to_period('M').astype(str)
-    df_res['실제금액'] = pd.to_numeric(df_res['실제금액'], errors='coerce').fillna(0)
-    df_res['고객국적'] = df_res['고객국적'].apply(lambda x: str(x).strip() if pd.notna(x) else '')
-    df_res['종류'] = df_res['종류'].apply(lambda x: str(x).strip() if pd.notna(x) else '')
-    df_res['시술수술명'] = df_res['시술수술명'].apply(lambda x: str(x).strip() if pd.notna(x) else '')
-    df_res['예약상태'] = df_res['예약상태'].apply(lambda x: str(x).strip() if pd.notna(x) else '')
+    df_res = finalize_reservations(df_res, source='운영시트')
 
     df_completed = df_res[df_res['예약상태'] == '시/수술 완료'].copy()
     df_all = df_res.copy()  # 전체 (취소/노쇼 포함)
@@ -305,6 +330,94 @@ def _agg_month_series(df):
     if '예약확정일' in df.columns:
         m = m.fillna(pd.to_datetime(df['예약확정일'], errors='coerce'))
     return m.dt.to_period('M').astype(str)
+
+
+@st.cache_data(show_spinner=False, ttl=600)
+def load_admin_reservations(path):
+    """어드민 case-metrics CSV 파일 → 예약완료 df + 전체예약 df (운영시트와 동일 스키마)"""
+    return _split_admin(load_admin_case_metrics(path))
+
+
+@st.cache_data(show_spinner=False, ttl=600)
+def load_admin_from_gsheet(file_path):
+    """운영 구글시트의 어드민 raw 탭 → 예약완료 df + 전체예약 df.
+
+    고객 실명·금액이 담긴 원천이라 공개 repo에 두지 않고, 기존 운영시트와
+    같은 접근통제 아래(같은 문서의 별도 탭) 관리한다.
+    탭이 없으면 (None, None)을 돌려 호출부가 다른 경로로 넘어가게 한다.
+    """
+    if str(file_path).startswith('http'):
+        import urllib.request
+        tmp = '/tmp/unniguide_gsheet_op.xlsx'
+        urllib.request.urlretrieve(file_path, tmp)
+        file_path = tmp
+
+    xls = pd.ExcelFile(file_path)
+    tab = next((n for n in xls.sheet_names if ADMIN_SHEET_KEYWORD in n), None)
+    if tab is None:
+        return None, None
+    df = pd.read_excel(file_path, sheet_name=tab, dtype=str)
+    return _split_admin(normalize_admin_frame(df))
+
+
+def _split_admin(df_admin):
+    df_res = finalize_reservations(df_admin, source='어드민')
+    df_completed = df_res[df_res['예약상태'] == '시/수술 완료'].copy()
+    return df_completed, df_res
+
+
+def merge_sources(op_completed, op_all, op_settle, ad_completed, ad_all,
+                  cutoff=ADMIN_CUTOFF_MONTH):
+    """운영시트(컷오프 전) + 어드민(컷오프 후)을 내원일 기준으로 이어붙인다.
+
+    2026년 7월 운영이 어드민으로 이관되면서 운영시트 입력이 2026-07-07에 멈췄다.
+    같은 달을 두 원천에서 세면 중복되므로, 내원 월을 기준으로 한쪽만 채택한다.
+      - 집계월 < cutoff  → 운영시트 (어드민은 4월 14% / 5월 87% / 6월 94%만 커버)
+      - 집계월 >= cutoff → 어드민   (운영시트는 7월 상순만 존재)
+    반환: (df_completed, df_settle, df_all, seam_info)
+    """
+    if ad_all is None or len(ad_all) == 0:
+        return op_completed, op_settle, op_all, None
+
+    def _split(df, keep_before):
+        m = _agg_month_series(df)
+        return df[(m < cutoff) if keep_before else (m >= cutoff)].copy()
+
+    op_c, op_a = _split(op_completed, True), _split(op_all, True)
+    ad_c, ad_a = _split(ad_completed, False), _split(ad_all, False)
+
+    df_completed = pd.concat([op_c, ad_c], ignore_index=True, sort=False)
+    df_all = pd.concat([op_a, ad_a], ignore_index=True, sort=False)
+
+    # 정산: 컷오프 이후는 정산 시트에 아직 없으므로 어드민 완료건에서 직접 산출
+    #       (수수료 = 시술 10% / 수술 20% — 정산 시트와 동일 규칙)
+    settle_parts = []
+    if op_settle is not None and len(op_settle) > 0:
+        settle_parts.append(op_settle[op_settle['정산월'] < cutoff].copy())
+    if len(ad_c) > 0:
+        ad_settle = pd.DataFrame({
+            '정산월': _agg_month_series(ad_c),
+            '병원명': ad_c['병원명'],
+            '고객명': ad_c['고객명'],
+            '국적': ad_c['고객국적'],
+            '구분': ad_c['종류'],
+            '시술금액': ad_c['실제금액'],
+        })
+        ad_settle['수수료금액'] = ad_settle.apply(
+            lambda r: _commission(r['시술금액'], r['구분']), axis=1)
+        settle_parts.append(ad_settle[ad_settle['시술금액'] > 0])
+    df_settle = (pd.concat(settle_parts, ignore_index=True, sort=False)
+                 if settle_parts else pd.DataFrame())
+
+    seam_info = {
+        'cutoff': cutoff,
+        'sheet_months': sorted(m for m in op_a['월'].dropna().unique() if m != 'NaT'),
+        'admin_months': sorted(m for m in ad_a['월'].dropna().unique() if m != 'NaT'),
+        'sheet_completed': len(op_c),
+        'admin_completed': len(ad_c),
+        'admin_settle_generated': len(ad_c),
+    }
+    return df_completed, df_settle, df_all, seam_info
 
 
 def _commission(amount, kind):
@@ -443,6 +556,23 @@ def gsheet_csv_url(sheet_id, gid):
 
 
 # ============================================================
+# 어드민 원천 (2026-07 이후)
+# ============================================================
+# ⚠️ 어드민 raw에는 고객 실명·국적·나이·성별·결제금액이 들어 있고 이 repo는 공개다.
+#    따라서 CSV를 repo에 커밋하지 않는다(.gitignore가 *.csv를 막고 있음).
+#    배포본은 운영 구글시트의 '어드민 케이스 raw' 탭에서 읽고,
+#    로컬 실행은 ~/Downloads의 최신 export를 자동으로 집는다.
+ADMIN_CSV_LOCAL_GLOB = '~/Downloads/case-metrics-*.csv'
+
+
+def resolve_admin_csv():
+    """로컬 어드민 CSV 최신본 경로 (없으면 None)."""
+    local = sorted(glob.glob(os.path.expanduser(ADMIN_CSV_LOCAL_GLOB)),
+                   key=os.path.getmtime, reverse=True)
+    return local[0] if local else None
+
+
+# ============================================================
 # 사이드바
 # ============================================================
 with st.sidebar:
@@ -459,6 +589,7 @@ with st.sidebar:
 
     df_completed = df_settle = df_all = None
     df_monthly = df_hosp_perf = cancel_summary = df_cancel_hospital = df_cancel_detail = None
+    seam_info = None
 
     if data_source == "Google Sheets (자동)":
         st.caption("Google Sheets에서 자동으로 데이터를 불러옵니다.")
@@ -472,6 +603,31 @@ with st.sidebar:
             st.success("운영 데이터 로드 완료")
         except Exception as e:
             st.error(f"운영 데이터 로드 실패: {str(e)[:50]}")
+
+        # 2026-07 이후 내원분은 어드민 원천으로 교체
+        # 1순위: 운영시트의 어드민 raw 탭 (배포본) → 2순위: 로컬 Downloads CSV
+        if df_completed is not None:
+            try:
+                with st.spinner("어드민 데이터 병합 중..."):
+                    ad_completed, ad_all = load_admin_from_gsheet(xlsx_url)
+                    origin = f"시트 '{ADMIN_SHEET_KEYWORD}' 탭"
+                    if ad_all is None:
+                        admin_csv = resolve_admin_csv()
+                        if admin_csv:
+                            ad_completed, ad_all = load_admin_reservations(admin_csv)
+                            origin = os.path.basename(admin_csv)
+                    if ad_all is not None:
+                        df_completed, df_settle, df_all, seam_info = merge_sources(
+                            df_completed, df_all, df_settle, ad_completed, ad_all)
+                if ad_all is not None:
+                    st.success(f"어드민 병합 완료 ({origin})")
+                else:
+                    st.warning(
+                        f"어드민 원천을 찾을 수 없어 {ADMIN_CUTOFF_MONTH} 이후가 비어 있습니다. "
+                        f"운영시트에 '{ADMIN_SHEET_KEYWORD} raw' 탭을 만들어 "
+                        f"어드민 case-metrics CSV를 붙여넣어 주세요.")
+            except Exception as e:
+                st.warning(f"어드민 병합 실패 (운영시트만 사용): {str(e)[:60]}")
 
         try:
             if df_completed is not None:
@@ -501,6 +657,26 @@ with st.sidebar:
                 with st.spinner("운영 데이터 로딩..."):
                     df_completed, df_settle, df_all = load_operation_excel(tmp)
 
+        st.markdown(f"**2. 어드민 데이터 ({ADMIN_CUTOFF_MONTH}~)**")
+        ad_candidates = sorted(glob.glob(os.path.expanduser(ADMIN_CSV_LOCAL_GLOB)),
+                               key=os.path.getmtime, reverse=True)
+        admin_csv = None
+        if ad_candidates:
+            admin_csv = st.selectbox("어드민 CSV", ad_candidates,
+                                     format_func=os.path.basename, key="ad")
+        else:
+            ad_upload = st.file_uploader("어드민 CSV 업로드", type=['csv'], key="ad_up")
+            if ad_upload:
+                admin_csv = "/tmp/unniguide_admin.csv"
+                with open(admin_csv, "wb") as f:
+                    f.write(ad_upload.getvalue())
+
+        if df_completed is not None and admin_csv:
+            with st.spinner("어드민 병합..."):
+                ad_completed, ad_all = load_admin_reservations(admin_csv)
+                df_completed, df_settle, df_all, seam_info = merge_sources(
+                    df_completed, df_all, df_settle, ad_completed, ad_all)
+
         # 내부 리포트: 운영 데이터(raw)에서 자동 계산 (별도 파일 불필요)
         if df_completed is not None:
             with st.spinner("내부리포트 집계..."):
@@ -524,8 +700,15 @@ if df_completed is None:
 # ============================================================
 # 필터
 # ============================================================
-all_months_res = sorted(df_completed['월'].dropna().unique())
-all_months_settle = sorted(df_settle['정산월'].unique()) if len(df_settle) > 0 else []
+def _valid_months(values):
+    """'월'은 Period→문자열이라 내원일이 빈 행이 'NaT' 문자열로 남는다.
+    dropna()로는 걸러지지 않아 월 선택 옵션에 섞여 들어가므로 명시적으로 제외한다."""
+    return sorted({str(v) for v in values
+                   if pd.notna(v) and re.fullmatch(r'\d{4}-\d{2}', str(v))})
+
+
+all_months_res = _valid_months(df_completed['월'])
+all_months_settle = _valid_months(df_settle['정산월']) if len(df_settle) > 0 else []
 all_months = sorted(set(all_months_res + all_months_settle))
 
 if not all_months:
@@ -536,10 +719,12 @@ with st.sidebar:
     st.divider()
     st.subheader("필터")
     if len(all_months) >= 2:
-        # 정산 데이터가 있는 최신월을 기본 끝점으로 (진행 중인 월 제외)
-        default_end = all_months_settle[-1] if all_months_settle else all_months[-1]
-        if default_end not in all_months:
-            default_end = all_months[-1]
+        # 기본 끝점 = 지난달(마지막으로 마감된 달).
+        # 어드민에는 미래 내원일 예약이 들어있어 최신월을 그대로 쓰면
+        # 진행 중/미래 달이 기본값이 되어 실적이 급락한 것처럼 보인다.
+        last_closed = str((pd.Timestamp.today().to_period('M') - 1))
+        past = [m for m in all_months if m <= last_closed]
+        default_end = past[-1] if past else all_months[-1]
         month_range = st.select_slider("기간 선택", options=all_months, value=(all_months[0], default_end))
         selected_months = [m for m in all_months if month_range[0] <= m <= month_range[1]]
     else:
@@ -553,6 +738,22 @@ with st.sidebar:
     selected_hospitals = st.multiselect("병원", all_hospitals, default=[], placeholder="전체 병원")
     st.divider()
     st.caption(f"예약완료 {len(df_completed):,}건 | 정산 {len(df_settle):,}건")
+
+    # 원천 구간 안내 — 어느 달을 어느 데이터로 세고 있는지 항상 보이게 둔다
+    if seam_info:
+        sm, am = seam_info['sheet_months'], seam_info['admin_months']
+        st.markdown(f"""
+        <div style="background:#F8F5FA; border-left:3px solid {BRAND_PLUM};
+             padding:10px 12px; border-radius:4px; font-size:11.5px; line-height:1.7;">
+            <b>데이터 원천</b><br>
+            📗 운영시트 · {sm[0] if sm else '-'} ~ {sm[-1] if sm else '-'}
+            <span style="color:#888;">({seam_info['sheet_completed']:,}건 완료)</span><br>
+            📘 어드민 · {am[0] if am else '-'} ~ {am[-1] if am else '-'}
+            <span style="color:#888;">({seam_info['admin_completed']:,}건 완료)</span><br>
+            <span style="color:#888;">{seam_info['cutoff']} 내원분부터 어드민 기준.
+            해당 월 정산은 실제금액 × 시술10%/수술20%로 자동 산출.</span>
+        </div>
+        """, unsafe_allow_html=True)
 
 # 필터 적용
 mask_res = df_completed['월'].isin(selected_months)
@@ -1065,6 +1266,28 @@ with tab4:
 
     proc_source_valid = proc_source[proc_source['시술수술명'].str.strip() != ''].copy()
 
+    # ---------- 시술명 입력 커버율 ----------
+    # 어드민 이관 중 treatments가 후순위로 입력돼 월별 충족률이 크게 다르다.
+    # 커버율을 숨기면 "울쎄라 1위" 같은 순위를 실제보다 확신하게 되므로 항상 노출한다.
+    if len(proc_source) > 0:
+        cov_rate = len(proc_source_valid) / len(proc_source) * 100
+        cov_by_month = (proc_source.assign(_has=proc_source['시술수술명'].str.strip() != '')
+                        .groupby('월')['_has'].agg(['sum', 'size']))
+        cov_by_month = cov_by_month[cov_by_month.index != 'NaT']
+        weak = [f"{m} {r['sum'] / r['size'] * 100:.0f}%"
+                for m, r in cov_by_month.iterrows() if r['size'] and r['sum'] / r['size'] < 0.8]
+        tone = ('#D63031', '#FFF5F5') if cov_rate < 70 else (
+            ('#E17055', '#FFF9F3') if cov_rate < 90 else (BRAND_GREEN, '#F4FBF6'))
+        st.markdown(f"""
+        <div style="background:{tone[1]}; border-left:3px solid {tone[0]};
+             padding:10px 14px; border-radius:4px; margin-bottom:14px; font-size:12.5px; line-height:1.7;">
+            <b style="color:{tone[0]};">시술명 입력 커버율 {cov_rate:.1f}%</b>
+            <span style="color:#666;">— 전체 {len(proc_source):,}건 중 {len(proc_source_valid):,}건에만 시술명이 있습니다.
+            아래 순위·비중은 <b>입력된 건만</b>의 분포입니다.</span>
+            {f'<br><span style="color:#888;">커버율 낮은 월: {" · ".join(weak)}</span>' if weak else ''}
+        </div>
+        """, unsafe_allow_html=True)
+
     col1, col2 = st.columns(2)
 
     with col1:
@@ -1231,9 +1454,9 @@ with tab6:
     data_type = st.radio("데이터 선택", ["예약 완료 데이터", "정산 데이터", "전체 예약 (취소/노쇼 포함)"], horizontal=True)
 
     if data_type == "예약 완료 데이터":
-        cols = ['월', '병원명', '고객국적', '종류', '시술수술명', '실제금액']
+        cols = ['월', '_source', '병원명', '고객국적', '종류', '시술수술명', '실제금액']
         avail = [c for c in cols if c in filtered_res.columns]
-        df_d = filtered_res[avail].sort_values('월', ascending=False)
+        df_d = filtered_res[avail].rename(columns={'_source': '원천'}).sort_values('월', ascending=False)
         st.dataframe(df_d, use_container_width=True, hide_index=True, height=500)
         st.download_button("CSV 다운로드", df_d.to_csv(index=False).encode('utf-8-sig'), "예약완료_필터.csv", "text/csv")
 
@@ -1276,6 +1499,15 @@ with tab7:
         format_func=lambda x: f"{x} ({datetime.strptime(x + '-01', '%Y-%m-%d').strftime('%Y년 %m월')})",
         key="report_month_sel",
     )
+
+    # generate_report.py는 구글시트만 읽는다 → 컷오프 이후 월은 데이터가 거의 비어 있다.
+    if report_month >= ADMIN_CUTOFF_MONTH:
+        st.error(f"""
+**{report_month}은 아직 일괄 생성을 지원하지 않습니다.**
+{ADMIN_CUTOFF_MONTH} 이후 실적은 어드민 원천에 있고, 이 일괄 생성기는 구글시트만 읽습니다.
+그대로 생성하면 대부분 빈 리포트가 나옵니다.
+→ 그 사이에는 **🏥 병원 분석 탭 하단의 '병원 개별 리포트'**를 쓰세요 (어드민 데이터 반영됨).
+        """)
 
     st.markdown("")
     st.info("""
