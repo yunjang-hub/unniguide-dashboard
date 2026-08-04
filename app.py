@@ -367,7 +367,7 @@ def _split_admin(df_admin):
 
 
 def merge_sources(op_completed, op_all, op_settle, ad_completed, ad_all,
-                  cutoff=ADMIN_CUTOFF_MONTH):
+                  cutoff=ADMIN_CUTOFF_MONTH, settle_override=None):
     """운영시트(컷오프 전) + 어드민(컷오프 후)을 내원일 기준으로 이어붙인다.
 
     2026년 7월 운영이 어드민으로 이관되면서 운영시트 입력이 2026-07-07에 멈췄다.
@@ -376,7 +376,13 @@ def merge_sources(op_completed, op_all, op_settle, ad_completed, ad_all,
       - 집계월 >= cutoff → 어드민   (운영시트는 7월 상순만 존재)
     반환: (df_completed, df_settle, df_all, seam_info)
     """
+    ov_months = (sorted(settle_override['정산월'].unique())
+                 if settle_override is not None and len(settle_override) > 0 else [])
+
     if ad_all is None or len(ad_all) == 0:
+        if ov_months:
+            base = op_settle[~op_settle['정산월'].isin(ov_months)] if len(op_settle) else op_settle
+            op_settle = pd.concat([base, settle_override], ignore_index=True, sort=False)
         return op_completed, op_settle, op_all, None
 
     def _split(df, keep_before):
@@ -389,11 +395,14 @@ def merge_sources(op_completed, op_all, op_settle, ad_completed, ad_all,
     df_completed = pd.concat([op_c, ad_c], ignore_index=True, sort=False)
     df_all = pd.concat([op_a, ad_a], ignore_index=True, sort=False)
 
-    # 정산: 컷오프 이후는 정산 시트에 아직 없으므로 어드민 완료건에서 직접 산출
-    #       (수수료 = 시술 10% / 수술 20% — 정산 시트와 동일 규칙)
+    # 정산 우선순위: ① 확정 정산 override → ② 정산 시트(컷오프 전) → ③ 어드민 자동산출
+    # 컷오프 이후는 정산 시트에 아직 없어서 자동산출(실제금액×시술10%/수술20%)로 메우지만,
+    # 손으로 검토·보정한 월(override)이 있으면 그쪽이 정답이다.
     settle_parts = []
     if op_settle is not None and len(op_settle) > 0:
-        settle_parts.append(op_settle[op_settle['정산월'] < cutoff].copy())
+        base = op_settle[(op_settle['정산월'] < cutoff)
+                         & (~op_settle['정산월'].isin(ov_months))]
+        settle_parts.append(base.copy())
     if len(ad_c) > 0:
         ad_settle = pd.DataFrame({
             '정산월': _agg_month_series(ad_c),
@@ -405,9 +414,16 @@ def merge_sources(op_completed, op_all, op_settle, ad_completed, ad_all,
         })
         ad_settle['수수료금액'] = ad_settle.apply(
             lambda r: _commission(r['시술금액'], r['구분']), axis=1)
-        settle_parts.append(ad_settle[ad_settle['시술금액'] > 0])
+        ad_settle = ad_settle[(ad_settle['시술금액'] > 0)
+                              & (~ad_settle['정산월'].isin(ov_months))]
+        settle_parts.append(ad_settle)
+    if ov_months:
+        settle_parts.append(settle_override)
     df_settle = (pd.concat(settle_parts, ignore_index=True, sort=False)
                  if settle_parts else pd.DataFrame())
+    if len(df_settle) > 0:
+        df_settle['_확정'] = df_settle.get('_확정', False)
+        df_settle['_확정'] = df_settle['_확정'].fillna(False).astype(bool)
 
     seam_info = {
         'cutoff': cutoff,
@@ -415,7 +431,7 @@ def merge_sources(op_completed, op_all, op_settle, ad_completed, ad_all,
         'admin_months': sorted(m for m in ad_a['월'].dropna().unique() if m != 'NaT'),
         'sheet_completed': len(op_c),
         'admin_completed': len(ad_c),
-        'admin_settle_generated': len(ad_c),
+        'settle_override_months': ov_months,
     }
     return df_completed, df_settle, df_all, seam_info
 
@@ -462,6 +478,25 @@ def load_internal_report(df_completed, df_all, df_settle):
         })
     else:
         df_monthly = pd.DataFrame(columns=['월', '완료건수', '시술건수', '수술건수', '시수술금액', '수수료매출'])
+    # 확정 정산이 있는 달은 그쪽 실적으로 교체.
+    # 어드민 raw에 누락(예: 디에이성형외과 18건)이 있어 raw 합계가 실제보다 낮게 나온다.
+    # 검토를 끝낸 정산이 있으면 그게 정답이므로 건수·금액·수수료를 정산 기준으로 맞춘다.
+    if df_settle is not None and len(df_settle) > 0 and '_확정' in df_settle.columns:
+        ov = df_settle[df_settle['_확정']]
+        if len(ov) > 0:
+            og = ov.groupby('정산월')
+            fixed = pd.DataFrame({
+                '월': list(og.groups.keys()),
+                '완료건수': og.size().values,
+                '시술건수': og['구분'].apply(lambda s: (s == '시술').sum()).values,
+                '수술건수': og['구분'].apply(lambda s: (s == '수술').sum()).values,
+                '시수술금액': og['시술금액'].sum().values,
+                '수수료매출': og['수수료금액'].sum().values,
+            })
+            df_monthly = pd.concat(
+                [df_monthly[~df_monthly['월'].isin(fixed['월'])], fixed],
+                ignore_index=True, sort=False)
+
     # 월별 취소+노쇼
     cn = allr[(is_cancel | is_noshow) & (allr['_월'] != 'NaT')]
     cn_by_month = cn.groupby('_월').size() if len(cn) > 0 else pd.Series(dtype=int)
@@ -567,6 +602,35 @@ ADMIN_CSV_LOCAL_GLOB = '~/Downloads/case-metrics-*.csv'
 ADMIN_CSV_REPO = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                               'data', 'admin_case_metrics.csv')
 
+# 확정 정산 override — 손으로 검토·보정을 끝낸 월별 정산.
+# 어드민 자동산출(실제금액×수수료율)보다 이 파일이 우선한다.
+# 고객명을 뺀 비식별 형태(정산월·병원명·국적·구분·시술금액·수수료금액).
+SETTLEMENT_OVERRIDE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                   'data', 'settlement_override.csv')
+
+
+@st.cache_data(show_spinner=False, ttl=600)
+def load_settlement_override(path):
+    """확정 정산 CSV → df_settle 스키마. 없으면 None."""
+    if not os.path.exists(path):
+        return None
+    df = pd.read_csv(path)
+    need = ['정산월', '병원명', '구분', '시술금액', '수수료금액']
+    missing = [c for c in need if c not in df.columns]
+    if missing:
+        raise ValueError(f"정산 override에 필수 컬럼 없음: {missing}")
+    if '국적' not in df.columns:
+        df['국적'] = ''
+    df['병원명'] = df['병원명'].apply(normalize_hospital)
+    df['고객명'] = ''  # 비식별 — 정산 탭 표시에는 쓰이지 않음
+    for c in ('시술금액', '수수료금액'):
+        df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0)
+    df['정산월'] = df['정산월'].astype(str).str.strip()
+    df['국적'] = df['국적'].fillna('').astype(str).str.strip()
+    df['구분'] = df['구분'].fillna('').astype(str).str.strip()
+    df['_확정'] = True   # 월별 트렌드가 이 달을 정산 기준으로 덮어쓰도록 하는 표식
+    return df[['정산월', '병원명', '고객명', '국적', '구분', '시술금액', '수수료금액', '_확정']]
+
 
 def resolve_admin_csv():
     """어드민 CSV 경로: 로컬 Downloads 최신 export(실명 포함) → repo 비식별본."""
@@ -621,9 +685,11 @@ with st.sidebar:
                         if admin_csv:
                             ad_completed, ad_all = load_admin_reservations(admin_csv)
                             origin = os.path.basename(admin_csv)
-                    if ad_all is not None:
+                    settle_ov = load_settlement_override(SETTLEMENT_OVERRIDE)
+                    if ad_all is not None or settle_ov is not None:
                         df_completed, df_settle, df_all, seam_info = merge_sources(
-                            df_completed, df_all, df_settle, ad_completed, ad_all)
+                            df_completed, df_all, df_settle, ad_completed, ad_all,
+                            settle_override=settle_ov)
                 if ad_all is not None:
                     st.success(f"어드민 병합 완료 ({origin})")
                 else:
@@ -680,7 +746,8 @@ with st.sidebar:
             with st.spinner("어드민 병합..."):
                 ad_completed, ad_all = load_admin_reservations(admin_csv)
                 df_completed, df_settle, df_all, seam_info = merge_sources(
-                    df_completed, df_all, df_settle, ad_completed, ad_all)
+                    df_completed, df_all, df_settle, ad_completed, ad_all,
+                    settle_override=load_settlement_override(SETTLEMENT_OVERRIDE))
 
         # 내부 리포트: 운영 데이터(raw)에서 자동 계산 (별도 파일 불필요)
         if df_completed is not None:
@@ -755,8 +822,12 @@ with st.sidebar:
             <span style="color:#888;">({seam_info['sheet_completed']:,}건 완료)</span><br>
             📘 어드민 · {am[0] if am else '-'} ~ {am[-1] if am else '-'}
             <span style="color:#888;">({seam_info['admin_completed']:,}건 완료)</span><br>
-            <span style="color:#888;">{seam_info['cutoff']} 내원분부터 어드민 기준.
-            해당 월 정산은 실제금액 × 시술10%/수술20%로 자동 산출.</span>
+            <span style="color:#888;">{seam_info['cutoff']} 내원분부터 어드민 기준.</span><br>
+            {(
+                "📕 확정 정산 · " + " · ".join(seam_info['settle_override_months'])
+                + ' <span style="color:#888;">(검토 완료본 사용)</span>'
+            ) if seam_info.get('settle_override_months') else
+             '<span style="color:#888;">정산은 실제금액 × 시술10%/수술20%로 자동 산출.</span>'}
         </div>
         """, unsafe_allow_html=True)
 

@@ -6,6 +6,7 @@
 # 예외: 어드민 비식별본만 허용 (deidentify_admin.py 산출물).
 # 고객 실명·나이·성별이 제거된 파일만 여기 들어간다. 원본 case-metrics-*.csv는 금지.
 !data/admin_case_metrics.csv
+!data/settlement_override.csv
 
 # 생성된 HTML 리포트 (루트 것들만 제외, docs/는 GitHub Pages 배포용이라 포함)
 /*.html
