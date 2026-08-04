@@ -169,6 +169,9 @@ def normalize_admin_frame(df):
     # 어드민 고유 필드 — 동반자/채널 구분은 운영시트에 없던 정보라 살려둔다
     out['row_kind'] = _s('row_kind')
     out['channel'] = _s('channel')
+    # 유입 채널 — 운영시트는 '채팅 접수일자'(날짜=온라인 / "오프라인")로 판별하는데
+    # 어드민은 전용 컬럼이 있다. 두 원천이 같은 값('온라인'/'오프라인')을 쓰게 맞춘다.
+    out['채널'] = _s('channel').map({'ONLINE': '온라인', 'OFFLINE': '오프라인'}).fillna('')
     out['hospital_region'] = _s('hospital_region')
     out['통역 서비스 요청'] = _s('interpreter_needed').map({'Y': '통역 요청', 'N': ''}).fillna('')
     out['_source'] = '어드민'

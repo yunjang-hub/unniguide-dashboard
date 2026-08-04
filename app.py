@@ -98,6 +98,29 @@ NAME_NORMALIZE = {
 NAME_NORMALIZE.update(SHEET_HOSPITAL_ALIASES)
 NAME_NORMALIZE.update(ADMIN_HOSPITAL_ALIASES)
 
+# 병원 → 행정구. 신논현·신사·압구정·청담·선릉은 모두 강남구다.
+# (어드민 hospital_region을 구 단위로 묶은 것 — 지역 세분류는 구 안에서 편차가 커서
+#  세부 상권을 보려면 병원별로 내려가야 한다)
+HOSPITAL_GU = {
+    'BLS의원 명동': '중구', '테이아의원 명동점': '중구', '톡스앤필의원-명동점': '중구',
+    '유픽의원-홍대점': '마포구', '제이필의원-홍대점': '마포구',
+    '톡스앤필의원-홍대점': '마포구', '홍대셀레나의원': '마포구',
+    '플로리아의원': '부산',
+    '네스트의원': '강남구', '디에이성형외과의원': '강남구', '루호성형외과의원': '강남구',
+    '리디아여성의원': '강남구', '릴리브의원': '강남구', '메이필클리닉': '강남구',
+    '메종드엠의원': '강남구', '모즈의원': '강남구', '사적인아름다움지유의원': '강남구',
+    '아크로한의원': '강남구', '오앤의원': '강남구', '올리팅성형외과': '강남구',
+    '우리성형외과의원': '강남구', '우아성형외과의원': '강남구', '우유빛의원': '강남구',
+    '유픽의원-강남점': '강남구', '제이필의원-강남점': '강남구', '청담디어의원': '강남구',
+    '테이아의원': '강남구', '톡스앤필의원-신논현점': '강남구', '티에스성형외과': '강남구',
+    '티유치과의원': '강남구', '플라덴성형외과의원': '강남구', '플래너성형외과의원': '강남구',
+    '플레저성형외과의원': '강남구', '허쉬성형외과의원': '강남구', '히트성형외과의원': '강남구',
+}
+
+# 결과가 확정된 예약 상태 — 전환율 분모. '예약 확정'(미내원 대기)과
+# '병원 추천'·'상담만'은 아직 결과가 안 나왔거나 예약이 아니라 제외한다.
+SETTLED_STATUSES = ('시/수술 완료', '예약 취소', '미진행')
+
 COUNTRY_FLAG = {
     '태국': '🇹🇭', '대만': '🇹🇼', '중국': '🇨🇳', '미국': '🇺🇸',
     '호주': '🇦🇺', '일본': '🇯🇵', '홍콩': '🇭🇰', '싱가포르': '🇸🇬',
@@ -242,6 +265,19 @@ def finalize_reservations(df_res, source):
     df_res['병원명'] = df_res['예약클리닉'].apply(normalize_hospital)
     df_res['내원일'] = pd.to_datetime(df_res['내원일'], errors='coerce')
     df_res['월'] = month_str(df_res['내원일'])
+    df_res['구'] = df_res['병원명'].map(HOSPITAL_GU).fillna('기타')
+    if '채널' not in df_res.columns:
+        # 운영시트: '채팅 접수일자'가 날짜면 온라인 유입, "오프라인"이면 센터 유입
+        if '채팅접수일자' in df_res.columns:
+            raw = df_res['채팅접수일자']
+            off = raw.astype(str).str.contains('오프라인', na=False)
+            on = pd.to_datetime(raw, errors='coerce').notna()
+            df_res['채널'] = pd.Series(
+                ['오프라인' if o else ('온라인' if n else '') for o, n in zip(off, on)],
+                index=df_res.index)
+        else:
+            df_res['채널'] = ''
+    df_res['채널'] = df_res['채널'].fillna('').astype(str)
     df_res['실제금액'] = pd.to_numeric(df_res['실제금액'], errors='coerce').fillna(0)
     for col in ('고객국적', '종류', '시술수술명', '예약상태'):
         df_res[col] = df_res[col].apply(lambda x: str(x).strip() if pd.notna(x) else '')
@@ -302,6 +338,8 @@ def load_operation_excel(file_path):
                 break
     df_res = df_res.rename(columns=rename)
 
+    # ⚠️ '채팅접수일자'는 날짜로 변환하지 않는다. 이 칸의 "오프라인" 문자열이
+    #    유입 채널 플래그라서, 파싱해버리면 온·오프 구분이 사라진다.
     required = ['예약상태', '예약클리닉', '고객국적', '내원일', '실제금액', '종류', '시술수술명']
     missing = [c for c in required if c not in df_res.columns]
     if missing:
@@ -917,8 +955,9 @@ st.markdown(f"""
 # ============================================================
 # 탭
 # ============================================================
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
-    "📊 Overview", "🌍 국적 분석", "🏥 병원 분석", "💉 시술 트렌드", "⚠️ 취소/No-show", "📋 원본 데이터", "📦 리포트 생성"
+tab1, tab2, tab3, tab4, tab8, tab5, tab6, tab7 = st.tabs([
+    "📊 Overview", "🌍 국적 분석", "🏥 병원 분석", "💉 시술 트렌드",
+    "🔪 시술/수술 구분", "⚠️ 취소/No-show", "📋 원본 데이터", "📦 리포트 생성"
 ])
 
 # 공통: 최신월/전월
@@ -1493,6 +1532,237 @@ with tab4:
                     for proc, cnt in cp.items():
                         st.markdown(f"- {proc[:35]} ({cnt}건)")
                     st.markdown("")
+
+
+# ============================================================
+# Tab 8: 시술/수술 구분
+# ============================================================
+with tab8:
+    st.subheader("시술 / 수술 구분 분석")
+    st.caption(f"데이터 기간: {period_label} | 수수료 = 시술 10% · 수술 20%")
+
+    ps = filtered_res[filtered_res['종류'].isin(['시술', '수술'])].copy()
+
+    if len(ps) == 0:
+        st.info("선택한 조건에 시술/수술 구분이 있는 데이터가 없습니다.")
+    else:
+        _s = ps[ps['종류'] == '시술']['실제금액']
+        _u = ps[ps['종류'] == '수술']['실제금액']
+
+        def _pair(col, label, series, color):
+            col.markdown(f"""
+            <div style="border:1px solid #eee; border-left:4px solid {color};
+                 border-radius:8px; padding:14px 16px;">
+              <div style="font-size:13px; color:#636E72;">{label}</div>
+              <div style="font-size:26px; font-weight:800;">{len(series):,}건</div>
+              <div style="font-size:13px; color:#2D3436; margin-top:6px;">
+                평균 <b>{format_krw(series.mean()) if len(series) else '-'}</b><br>
+                중위 <b>{format_krw(series.median()) if len(series) else '-'}</b>
+              </div>
+            </div>""", unsafe_allow_html=True)
+
+        c1, c2, c3, c4 = st.columns(4)
+        _pair(c1, '시술', _s, BRAND_ORANGE)
+        _pair(c2, '수술', _u, BRAND_PLUM)
+        mult = (_u.mean() / _s.mean()) if len(_u) and len(_s) and _s.mean() else None
+        # 수수료율이 2배(10%↔20%)라 수수료 격차는 객단가 격차의 2배로 벌어진다
+        c3.metric("수술 객단가 배수", f"{mult:.1f}배" if mult else "-",
+                  help="수술 평균 ÷ 시술 평균")
+        c4.metric("수술 수수료 배수", f"{mult * 2:.1f}배" if mult else "-",
+                  help="수수료율이 시술 10% / 수술 20%라 격차가 2배로 증폭됩니다")
+
+        _u_rev = _u.sum()
+        _tot_rev = ps['실제금액'].sum()
+        _u_comm = _u_rev * 0.20
+        _tot_comm = _u_comm + _s.sum() * 0.10
+        st.markdown(f"""
+        <div style="background:#F8F5FA; border-left:3px solid {BRAND_PLUM};
+             padding:12px 14px; border-radius:4px; margin:14px 0; font-size:13px; line-height:1.8;">
+          수술 <b>{len(_u):,}건</b>은 전체 건수의 <b>{len(_u)/len(ps)*100:.1f}%</b>인데
+          매출의 <b>{_u_rev/_tot_rev*100:.1f}%</b>,
+          수수료의 <b>{(_u_comm/_tot_comm*100) if _tot_comm else 0:.1f}%</b>를 만듭니다.
+        </div>""", unsafe_allow_html=True)
+
+        # ---------- 월별 추이 ----------
+        st.subheader("월별 객단가 추이")
+        pm = ps[ps['월'].isin(selected_months)]
+        rows = []
+        for m in selected_months:
+            g = pm[pm['월'] == m]
+            if len(g) == 0:
+                continue
+            s_, u_ = g[g['종류'] == '시술']['실제금액'], g[g['종류'] == '수술']['실제금액']
+            rows.append({'월': m, '시술 건수': len(s_), '수술 건수': len(u_),
+                         '시술 객단가': s_.mean() if len(s_) else None,
+                         '수술 객단가': u_.mean() if len(u_) else None,
+                         '수술 매출비중(%)': round(u_.sum() / g['실제금액'].sum() * 100, 1)
+                         if g['실제금액'].sum() else 0})
+        tm = pd.DataFrame(rows)
+        if len(tm) > 0:
+            g1, g2 = st.columns([3, 2])
+            with g1:
+                fig = go.Figure()
+                for k, c in [('시술 객단가', BRAND_ORANGE), ('수술 객단가', BRAND_PLUM)]:
+                    fig.add_trace(go.Scatter(x=tm['월'], y=tm[k], name=k, mode='lines+markers',
+                                             line=dict(color=c, width=3)))
+                fig.update_layout(title="시술 vs 수술 객단가", height=360,
+                                  yaxis_title="원", legend=dict(orientation='h', y=-0.2))
+                st.plotly_chart(fig, use_container_width=True)
+            with g2:
+                fig2 = px.bar(tm, x='월', y='수술 매출비중(%)',
+                              color_discrete_sequence=[BRAND_PLUM])
+                fig2.update_layout(title="수술 매출비중", height=360)
+                st.plotly_chart(fig2, use_container_width=True)
+            disp = tm.copy()
+            for c in ('시술 객단가', '수술 객단가'):
+                disp[c] = disp[c].apply(lambda v: format_krw(v) if pd.notna(v) else '-')
+            st.dataframe(disp, use_container_width=True, hide_index=True)
+
+        # ---------- 채널별 ----------
+        st.subheader("유입 채널별 (온라인 / 오프라인)")
+        st.caption("온라인 = 채팅 유입 · 오프라인 = 센터 방문 유입")
+        ch = ps[ps['채널'].isin(['온라인', '오프라인'])]
+        if len(ch) == 0:
+            st.info("채널 정보가 있는 데이터가 없습니다.")
+        else:
+            rows = []
+            for c_, g in ch.groupby('채널'):
+                s_, u_ = g[g['종류'] == '시술']['실제금액'], g[g['종류'] == '수술']['실제금액']
+                rows.append({'채널': c_, '전체 건수': len(g),
+                             '시술 건수': len(s_),
+                             '시술 평균': s_.mean() if len(s_) else None,
+                             '시술 중위': s_.median() if len(s_) else None,
+                             '수술 건수': len(u_),
+                             '수술 평균': u_.mean() if len(u_) else None,
+                             '수술 건수비중(%)': round(len(u_) / len(g) * 100, 1),
+                             '수술 매출비중(%)': round(u_.sum() / g['실제금액'].sum() * 100, 1)
+                             if g['실제금액'].sum() else 0})
+            cd = pd.DataFrame(rows)
+            show = cd.copy()
+            for c_ in ('시술 평균', '시술 중위', '수술 평균'):
+                show[c_] = show[c_].apply(lambda v: format_krw(v) if pd.notna(v) else '-')
+            st.dataframe(show, use_container_width=True, hide_index=True)
+            if len(cd) == 2 and cd['수술 건수'].sum() > 0:
+                top = cd.loc[cd['수술 건수'].idxmax()]
+                st.markdown(f"""
+                <div style="background:#FFF9F3; border-left:3px solid {BRAND_ORANGE};
+                     padding:10px 14px; border-radius:4px; font-size:13px;">
+                  수술 {int(cd['수술 건수'].sum())}건 중
+                  <b>{int(top['수술 건수'])}건({top['수술 건수']/cd['수술 건수'].sum()*100:.0f}%)이
+                  {top['채널']} 유입</b>입니다.
+                </div>""", unsafe_allow_html=True)
+
+        # ---------- 구별 ----------
+        st.subheader("구별")
+        rows = []
+        for gu, g in ps.groupby('구'):
+            s_, u_ = g[g['종류'] == '시술']['실제금액'], g[g['종류'] == '수술']['실제금액']
+            rows.append({'구': gu, '병원수': g['병원명'].nunique(), '전체 건수': len(g),
+                         '시술 건수': len(s_),
+                         '시술 평균': s_.mean() if len(s_) else None,
+                         '시술 중위': s_.median() if len(s_) else None,
+                         '수술 건수': len(u_),
+                         '수술 평균': u_.mean() if len(u_) else None,
+                         '수술 매출비중(%)': round(u_.sum() / g['실제금액'].sum() * 100, 1)
+                         if g['실제금액'].sum() else 0,
+                         '_매출': g['실제금액'].sum()})
+        gd = pd.DataFrame(rows).sort_values('_매출', ascending=False).drop(columns='_매출')
+        show = gd.copy()
+        for c_ in ('시술 평균', '시술 중위', '수술 평균'):
+            show[c_] = show[c_].apply(lambda v: format_krw(v) if pd.notna(v) else '-')
+        st.dataframe(show, use_container_width=True, hide_index=True)
+        st.caption("⚠️ 구별 객단가는 시술·수술을 반드시 나눠서 보세요. "
+                   "수술이 한 구에 쏠려 있으면 혼합 객단가가 그 구를 실제보다 높게 보이게 합니다.")
+
+        # ---------- 국적별 ----------
+        st.subheader("국적별 시술/수술 비중")
+        min_n = st.slider("최소 건수", 5, 50, 20, 5, key="ps_min_n",
+                          help="표본이 작은 국적은 비중이 크게 흔들려 제외합니다")
+        rows = []
+        for c_, g in ps[ps['고객국적'] != ''].groupby('고객국적'):
+            if len(g) < min_n:
+                continue
+            s_, u_ = g[g['종류'] == '시술']['실제금액'], g[g['종류'] == '수술']['실제금액']
+            rows.append({'국적': c_, '전체': len(g), '시술': len(s_), '수술': len(u_),
+                         '수술 건수비중(%)': round(len(u_) / len(g) * 100, 1),
+                         '수술 매출비중(%)': round(u_.sum() / g['실제금액'].sum() * 100, 1)
+                         if g['실제금액'].sum() else 0,
+                         '시술 평균': s_.mean() if len(s_) else None,
+                         '수술 평균': u_.mean() if len(u_) else None,
+                         '전체 객단가': g['실제금액'].mean()})
+        nd = pd.DataFrame(rows)
+        if len(nd) == 0:
+            st.info(f"건수 {min_n}건 이상인 국적이 없습니다.")
+        else:
+            nd = nd.sort_values('수술 매출비중(%)', ascending=False)
+            show = nd.copy()
+            for c_ in ('시술 평균', '수술 평균', '전체 객단가'):
+                show[c_] = show[c_].apply(lambda v: format_krw(v) if pd.notna(v) else '-')
+            st.dataframe(show, use_container_width=True, hide_index=True)
+            zero = nd[nd['수술'] == 0]['국적'].tolist()
+            if zero:
+                st.caption(f"수술 0건 국적: {' · '.join(zero)} — 수술 파이프라인이 없는 시장입니다.")
+
+        # ---------- 수술 취급 병원 ----------
+        st.subheader("수술 취급 병원")
+        us = ps[ps['종류'] == '수술']
+        if len(us) == 0:
+            st.info("선택한 조건에 수술 데이터가 없습니다.")
+        else:
+            hd = us.groupby('병원명').agg(
+                수술건수=('실제금액', 'size'), 평균객단가=('실제금액', 'mean'),
+                수술매출=('실제금액', 'sum')).reset_index()
+            hd['구'] = hd['병원명'].map(HOSPITAL_GU).fillna('기타')
+            hd['수수료(20%)'] = hd['수술매출'] * 0.20
+            hd = hd.sort_values('수술매출', ascending=False)
+            show = hd[['병원명', '구', '수술건수', '평균객단가', '수술매출', '수수료(20%)']].copy()
+            for c_ in ('평균객단가', '수술매출', '수수료(20%)'):
+                show[c_] = show[c_].apply(format_krw)
+            st.dataframe(show, use_container_width=True, hide_index=True)
+            st.caption(f"수술 취급 {len(hd)}곳 / 전체 {ps['병원명'].nunique()}곳 "
+                       f"({len(hd)/ps['병원명'].nunique()*100:.0f}%)")
+
+        # ---------- 완료 전환율 ----------
+        st.divider()
+        st.subheader("병원별 시·수술 완료 전환율")
+        st.caption("분모 = 결과가 확정된 예약(완료 + 취소 + 미진행 + No-show). "
+                   "'예약 확정'(미내원 대기)은 아직 결과가 안 나와 제외합니다.")
+
+        conv = df_all[df_all['월'].isin(selected_months)].copy()
+        if selected_nationalities:
+            conv = conv[conv['고객국적'].isin(selected_nationalities)]
+        if selected_hospitals:
+            conv = conv[conv['병원명'].isin(selected_hospitals)]
+        conv['_상태'] = conv['예약상태'].astype(str).str.strip()
+        conv.loc[conv['_상태'].str.lower().str.contains(
+            'no-show|no show|noshow', na=False), '_상태'] = 'No-show'
+        conv = conv[conv['_상태'].isin(list(SETTLED_STATUSES) + ['No-show'])]
+
+        if len(conv) == 0:
+            st.info("전환율을 계산할 데이터가 없습니다.")
+        else:
+            conv['_완료'] = (conv['_상태'] == '시/수술 완료').astype(int)
+            k1, k2, k3 = st.columns(3)
+            k1.metric("전체 완료 전환율", f"{conv['_완료'].mean()*100:.1f}%",
+                      help=f"{conv['_완료'].sum():,} / {len(conv):,}건")
+            for col, c_ in zip((k2, k3), ('온라인', '오프라인')):
+                g = conv[conv['채널'] == c_]
+                col.metric(f"{c_} 전환율",
+                           f"{g['_완료'].mean()*100:.1f}%" if len(g) else "-",
+                           help=f"{g['_완료'].sum():,} / {len(g):,}건" if len(g) else None)
+
+            cv = conv.groupby('병원명').agg(
+                결과확정=('_완료', 'size'), 완료=('_완료', 'sum')).reset_index()
+            cv['전환율(%)'] = (cv['완료'] / cv['결과확정'] * 100).round(1)
+            cv['구'] = cv['병원명'].map(HOSPITAL_GU).fillna('기타')
+            for st_, lab in [('예약 취소', '취소'), ('미진행', '미진행'), ('No-show', 'No-show')]:
+                cnt = conv[conv['_상태'] == st_].groupby('병원명').size()
+                cv[lab] = cv['병원명'].map(cnt).fillna(0).astype(int)
+            cv = cv[cv['결과확정'] >= 5].sort_values('전환율(%)', ascending=False)
+            st.dataframe(cv[['병원명', '구', '결과확정', '완료', '전환율(%)',
+                             '취소', '미진행', 'No-show']],
+                         use_container_width=True, hide_index=True)
+            st.caption("표본 5건 미만 병원은 제외했습니다.")
 
 
 # ============================================================
