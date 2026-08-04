@@ -117,6 +117,14 @@ HOSPITAL_GU = {
     '플레저성형외과의원': '강남구', '허쉬성형외과의원': '강남구', '히트성형외과의원': '강남구',
 }
 
+# 수술을 취급하지 않는 병원. 여기서 종류='수술'로 들어온 건은 입력 오류이므로
+# 시술로 교정한다. 근거: 정산 요청 리스트(실청구 기준)에서 같은 건이 '시술'·수수료 10%로
+# 청구돼 있다. 예) 톡스앤필-신논현 2026-05 '바디온다 10,000 KJ' 649,000원 → 정산은 시술/64,900원
+NON_SURGERY_HOSPITALS = {
+    '톡스앤필의원-명동점', '톡스앤필의원-신논현점', '톡스앤필의원-홍대점',
+    '메종드엠의원',
+}
+
 # 결과가 확정된 예약 상태 — 전환율 분모. '예약 확정'(미내원 대기)과
 # '병원 추천'·'상담만'은 아직 결과가 안 나왔거나 예약이 아니라 제외한다.
 SETTLED_STATUSES = ('시/수술 완료', '예약 취소', '미진행')
@@ -281,6 +289,11 @@ def finalize_reservations(df_res, source):
     df_res['실제금액'] = pd.to_numeric(df_res['실제금액'], errors='coerce').fillna(0)
     for col in ('고객국적', '종류', '시술수술명', '예약상태'):
         df_res[col] = df_res[col].apply(lambda x: str(x).strip() if pd.notna(x) else '')
+    # 수술 미취급 병원의 '수술' 표기는 오입력 → 시술로 교정 (수수료율도 10%가 맞음).
+    # 교정 사실을 컬럼으로 남겨 대시보드에서 원천 수정 대상으로 노출한다.
+    _bad = (df_res['종류'] == '수술') & df_res['병원명'].isin(NON_SURGERY_HOSPITALS)
+    df_res['_종류교정'] = _bad
+    df_res.loc[_bad, '종류'] = '시술'
     if '_source' not in df_res.columns:
         df_res['_source'] = source
     return df_res
@@ -1720,6 +1733,27 @@ with tab8:
             st.dataframe(show, use_container_width=True, hide_index=True)
             st.caption(f"수술 취급 {len(hd)}곳 / 전체 {ps['병원명'].nunique()}곳 "
                        f"({len(hd)/ps['병원명'].nunique()*100:.0f}%)")
+
+        # ---- 종류 오입력 교정 내역 (원천 수정 대상) ----
+        fixed = filtered_res[filtered_res.get('_종류교정', False) == True] \
+            if '_종류교정' in filtered_res.columns else pd.DataFrame()
+        suspect = ps[(ps['종류'] == '수술') & (ps['실제금액'] <= 0)]
+        if len(fixed) > 0 or len(suspect) > 0:
+            with st.expander(f"🔧 종류 오입력 교정 {len(fixed)}건"
+                             + (f" · 확인 필요 {len(suspect)}건" if len(suspect) else ''),
+                             expanded=False):
+                if len(fixed) > 0:
+                    st.markdown("**수술 미취급 병원에 '수술'로 입력된 건 → 시술로 교정**")
+                    st.caption("정산 요청 리스트에는 같은 건이 '시술'·수수료 10%로 청구돼 있어 "
+                               "정산 쪽이 맞습니다. 예약확정 리스트/어드민의 종류를 고쳐주세요.")
+                    cols = [c for c in ['월', '_source', '병원명', '시술수술명', '실제금액']
+                            if c in fixed.columns]
+                    st.dataframe(fixed[cols], use_container_width=True, hide_index=True)
+                if len(suspect) > 0:
+                    st.markdown("**금액 0원인 수술 건 (근거 불충분)**")
+                    cols = [c for c in ['월', '_source', '병원명', '시술수술명', '실제금액']
+                            if c in suspect.columns]
+                    st.dataframe(suspect[cols], use_container_width=True, hide_index=True)
 
         # ---------- 완료 전환율 ----------
         st.divider()
