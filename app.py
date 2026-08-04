@@ -175,6 +175,45 @@ def format_krw(amount):
 # ============================================================
 # 데이터 로딩
 # ============================================================
+def _download_to_tmp(url, name):
+    """URL을 임시 파일로 내려받는다. 같은 이름을 쓰는 다른 로더와 겹치지 않게
+    호출부가 고유한 name을 준다. 부분 기록된 파일을 읽지 않도록 임시명으로 받고
+    다 받은 뒤 최종 경로로 옮긴다(원자적 교체)."""
+    import urllib.request
+    dst = os.path.join('/tmp', name)
+    part = f'{dst}.{os.getpid()}.part'
+    urllib.request.urlretrieve(url, part)
+    os.replace(part, dst)
+    return dst
+
+
+MONTH_RE = re.compile(r'^\d{4}-\d{2}$')
+
+
+def month_str(series):
+    """날짜 Series → 'YYYY-MM' 문자열. 결측은 'NaT'.
+
+    반드시 순수 문자열만 담아야 한다. NaN이 섞이면 sorted()가
+    float과 str을 비교하다 TypeError로 죽는다(과거 병원 개별 리포트 장애 원인).
+    """
+    d = pd.to_datetime(series, errors='coerce')
+    if not pd.api.types.is_datetime64_any_dtype(d):
+        d = pd.to_datetime(d.astype(str), errors='coerce')
+    return d.dt.strftime('%Y-%m').fillna('NaT').astype(str)
+
+
+def valid_months(values):
+    """'YYYY-MM' 형태만 골라 정렬. 'NaT'·NaN·None·숫자 전부 배제."""
+    out = set()
+    for v in values:
+        if v is None or (isinstance(v, float) and pd.isna(v)):
+            continue
+        s = str(v)
+        if MONTH_RE.match(s):
+            out.add(s)
+    return sorted(out)
+
+
 def finalize_reservations(df_res, source):
     """예약 raw(운영시트/어드민 공통)에 파생 컬럼을 붙인다.
 
@@ -183,7 +222,7 @@ def finalize_reservations(df_res, source):
     df_res = df_res.copy()
     df_res['병원명'] = df_res['예약클리닉'].apply(normalize_hospital)
     df_res['내원일'] = pd.to_datetime(df_res['내원일'], errors='coerce')
-    df_res['월'] = df_res['내원일'].dt.to_period('M').astype(str)
+    df_res['월'] = month_str(df_res['내원일'])
     df_res['실제금액'] = pd.to_numeric(df_res['실제금액'], errors='coerce').fillna(0)
     for col in ('고객국적', '종류', '시술수술명', '예약상태'):
         df_res[col] = df_res[col].apply(lambda x: str(x).strip() if pd.notna(x) else '')
@@ -198,10 +237,7 @@ def load_operation_excel(file_path):
 
     # URL인 경우 다운로드
     if str(file_path).startswith('http'):
-        import urllib.request
-        tmp = '/tmp/unniguide_gsheet_op.xlsx'
-        urllib.request.urlretrieve(file_path, tmp)
-        file_path = tmp
+        file_path = _download_to_tmp(file_path, 'unniguide_gsheet_op.xlsx')
 
     # 예약 시트
     # 시트 이름 호환: 로컬 Excel vs Google Sheets
@@ -329,7 +365,7 @@ def _agg_month_series(df):
     m = pd.to_datetime(df['내원일'], errors='coerce')
     if '예약확정일' in df.columns:
         m = m.fillna(pd.to_datetime(df['예약확정일'], errors='coerce'))
-    return m.dt.to_period('M').astype(str)
+    return month_str(m)
 
 
 @st.cache_data(show_spinner=False, ttl=600)
@@ -347,10 +383,9 @@ def load_admin_from_gsheet(file_path):
     탭이 없으면 (None, None)을 돌려 호출부가 다른 경로로 넘어가게 한다.
     """
     if str(file_path).startswith('http'):
-        import urllib.request
-        tmp = '/tmp/unniguide_gsheet_op.xlsx'
-        urllib.request.urlretrieve(file_path, tmp)
-        file_path = tmp
+        # ⚠️ load_operation_excel과 다른 경로를 써야 한다. 같은 임시 파일을 공유하면
+        #    두 로더가 동시에 돌 때 반쯤 쓰인 파일을 읽어 데이터가 깨진다.
+        file_path = _download_to_tmp(file_path, 'unniguide_gsheet_admin.xlsx')
 
     xls = pd.ExcelFile(file_path)
     tab = next((n for n in xls.sheet_names if ADMIN_SHEET_KEYWORD in n), None)
@@ -383,6 +418,9 @@ def merge_sources(op_completed, op_all, op_settle, ad_completed, ad_all,
         if ov_months:
             base = op_settle[~op_settle['정산월'].isin(ov_months)] if len(op_settle) else op_settle
             op_settle = pd.concat([base, settle_override], ignore_index=True, sort=False)
+            # concat으로 생긴 _확정 NaN을 False로 — NaN이 남으면 불리언 인덱싱이 터진다
+            op_settle['_확정'] = op_settle.get('_확정', False)
+            op_settle['_확정'] = op_settle['_확정'].fillna(False).astype(bool)
         return op_completed, op_settle, op_all, None
 
     def _split(df, keep_before):
@@ -394,6 +432,10 @@ def merge_sources(op_completed, op_all, op_settle, ad_completed, ad_all,
 
     df_completed = pd.concat([op_c, ad_c], ignore_index=True, sort=False)
     df_all = pd.concat([op_a, ad_a], ignore_index=True, sort=False)
+    # concat은 한쪽에 없는 컬럼을 NaN으로 채운다 → '월'에 NaN이 섞이면
+    # 이후 sorted()가 float/str 비교로 죽는다. 문자열로 다시 못 박는다.
+    for _d in (df_completed, df_all):
+        _d['월'] = _d['월'].where(_d['월'].notna(), 'NaT').astype(str)
 
     # 정산 우선순위: ① 확정 정산 override → ② 정산 시트(컷오프 전) → ③ 어드민 자동산출
     # 컷오프 이후는 정산 시트에 아직 없어서 자동산출(실제금액×시술10%/수술20%)로 메우지만,
@@ -427,8 +469,8 @@ def merge_sources(op_completed, op_all, op_settle, ad_completed, ad_all,
 
     seam_info = {
         'cutoff': cutoff,
-        'sheet_months': sorted(m for m in op_a['월'].dropna().unique() if m != 'NaT'),
-        'admin_months': sorted(m for m in ad_a['월'].dropna().unique() if m != 'NaT'),
+        'sheet_months': valid_months(op_a['월'].unique()),
+        'admin_months': valid_months(ad_a['월'].unique()),
         'sheet_completed': len(op_c),
         'admin_completed': len(ad_c),
         'settle_override_months': ov_months,
@@ -455,7 +497,7 @@ def load_internal_report(df_completed, df_all, df_settle):
     comp['_수수료'] = comp.apply(lambda r: _commission(r['실제금액'], r['종류']), axis=1)
     comp['_시술'] = (comp['종류'] == '시술').astype(int)
     comp['_수술'] = (comp['종류'] == '수술').astype(int)
-    comp_v = comp[comp['_월'] != 'NaT'].copy()
+    comp_v = comp[comp['_월'].isin(valid_months(comp['_월'].unique()))].copy()
 
     # 취소/노쇼 마스크 (전체 예약 기준)
     allr = df_all.copy()
@@ -498,7 +540,7 @@ def load_internal_report(df_completed, df_all, df_settle):
                 ignore_index=True, sort=False)
 
     # 월별 취소+노쇼
-    cn = allr[(is_cancel | is_noshow) & (allr['_월'] != 'NaT')]
+    cn = allr[(is_cancel | is_noshow) & allr['_월'].isin(valid_months(allr['_월'].unique()))]
     cn_by_month = cn.groupby('_월').size() if len(cn) > 0 else pd.Series(dtype=int)
     df_monthly['취소노쇼'] = df_monthly['월'].map(cn_by_month).fillna(0)
     df_monthly['평균객단가'] = (df_monthly['시수술금액'] / df_monthly['완료건수'].replace(0, pd.NA)).fillna(0)
@@ -517,8 +559,8 @@ def load_internal_report(df_completed, df_all, df_settle):
             '누적수수료': hg['_수수료'].sum().values,
         })
         # 최신월 (집계 가능한 월 중 최댓값)
-        valid_months = comp_h[comp_h['_월'] != 'NaT']['_월']
-        latest = valid_months.max() if len(valid_months) > 0 else None
+        vm_series = comp_h[comp_h['_월'].isin(valid_months(comp_h['_월'].unique()))]['_월']
+        latest = vm_series.max() if len(vm_series) > 0 else None
         if latest:
             lm = comp_h[comp_h['_월'] == latest].groupby('병원명').agg(
                 최신월건수=('실제금액', 'size'), 최신월금액=('실제금액', 'sum')).reset_index()
@@ -772,15 +814,8 @@ if df_completed is None:
 # ============================================================
 # 필터
 # ============================================================
-def _valid_months(values):
-    """'월'은 Period→문자열이라 내원일이 빈 행이 'NaT' 문자열로 남는다.
-    dropna()로는 걸러지지 않아 월 선택 옵션에 섞여 들어가므로 명시적으로 제외한다."""
-    return sorted({str(v) for v in values
-                   if pd.notna(v) and re.fullmatch(r'\d{4}-\d{2}', str(v))})
-
-
-all_months_res = _valid_months(df_completed['월'])
-all_months_settle = _valid_months(df_settle['정산월']) if len(df_settle) > 0 else []
+all_months_res = valid_months(df_completed['월'])
+all_months_settle = valid_months(df_settle['정산월']) if len(df_settle) > 0 else []
 all_months = sorted(set(all_months_res + all_months_settle))
 
 if not all_months:
@@ -1197,8 +1232,8 @@ with tab3:
 
         hc = df_completed[df_completed['병원명'] == rep_hosp].copy()
         hs = df_settle[df_settle['병원명'] == rep_hosp].copy() if len(df_settle) > 0 else pd.DataFrame(columns=['정산월', '시술금액', '수수료금액'])
-        hc_months = sorted([m for m in hc['월'].unique() if m and m != 'NaT'])
-        hs_months = sorted([m for m in hs['정산월'].unique()]) if len(hs) > 0 else []
+        hc_months = valid_months(hc['월'].unique())
+        hs_months = valid_months(hs['정산월'].unique()) if len(hs) > 0 else []
 
         if len(hc) == 0 and len(hs) == 0:
             st.info("선택한 병원의 데이터가 없습니다.")
@@ -1245,7 +1280,7 @@ with tab3:
 
             # --- 월별 추이 ---
             st.markdown("#### 📈 월별 추이")
-            mc = hc[hc['월'] != 'NaT'].groupby('월').agg(완료건수=('실제금액', 'size'), 매출=('실제금액', 'sum'))
+            mc = hc[hc['월'].isin(hc_months)].groupby('월').agg(완료건수=('실제금액', 'size'), 매출=('실제금액', 'sum'))
             ms = hs.groupby('정산월').agg(수수료=('수수료금액', 'sum')) if len(hs) > 0 else pd.DataFrame()
             all_m = sorted(set(mc.index) | set(ms.index))
             trows, cumc = [], 0
@@ -1349,7 +1384,7 @@ with tab4:
         cov_rate = len(proc_source_valid) / len(proc_source) * 100
         cov_by_month = (proc_source.assign(_has=proc_source['시술수술명'].str.strip() != '')
                         .groupby('월')['_has'].agg(['sum', 'size']))
-        cov_by_month = cov_by_month[cov_by_month.index != 'NaT']
+        cov_by_month = cov_by_month[[bool(MONTH_RE.match(str(i))) for i in cov_by_month.index]]
         weak = [f"{m} {r['sum'] / r['size'] * 100:.0f}%"
                 for m, r in cov_by_month.iterrows() if r['size'] and r['sum'] / r['size'] < 0.8]
         tone = ('#D63031', '#FFF5F5') if cov_rate < 70 else (
