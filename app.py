@@ -558,18 +558,23 @@ def gsheet_csv_url(sheet_id, gid):
 # ============================================================
 # 어드민 원천 (2026-07 이후)
 # ============================================================
-# ⚠️ 어드민 raw에는 고객 실명·국적·나이·성별·결제금액이 들어 있고 이 repo는 공개다.
-#    따라서 CSV를 repo에 커밋하지 않는다(.gitignore가 *.csv를 막고 있음).
-#    배포본은 운영 구글시트의 '어드민 케이스 raw' 탭에서 읽고,
-#    로컬 실행은 ~/Downloads의 최신 export를 자동으로 집는다.
+# ⚠️ 이 repo는 공개다. 어드민 원본에는 고객 실명·나이·성별이 행 단위로 있어
+#    그대로 커밋할 수 없다. repo에 두는 파일은 deidentify_admin.py로
+#    개인식별정보를 제거한 버전이며, 고객명이 필요한 화면(취소/노쇼 상세, 정산 명세)은
+#    비게 된다. 실명까지 필요하면 운영시트에 '어드민 케이스 raw' 탭을 만들면
+#    그쪽을 우선 사용한다(ADMIN_SOURCE.md 참고).
 ADMIN_CSV_LOCAL_GLOB = '~/Downloads/case-metrics-*.csv'
+ADMIN_CSV_REPO = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                              'data', 'admin_case_metrics.csv')
 
 
 def resolve_admin_csv():
-    """로컬 어드민 CSV 최신본 경로 (없으면 None)."""
+    """어드민 CSV 경로: 로컬 Downloads 최신 export(실명 포함) → repo 비식별본."""
     local = sorted(glob.glob(os.path.expanduser(ADMIN_CSV_LOCAL_GLOB)),
                    key=os.path.getmtime, reverse=True)
-    return local[0] if local else None
+    if local:
+        return local[0]
+    return ADMIN_CSV_REPO if os.path.exists(ADMIN_CSV_REPO) else None
 
 
 # ============================================================

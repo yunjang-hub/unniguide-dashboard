@@ -10,22 +10,47 @@
 
 컷오프는 `admin_source.py`의 `ADMIN_CUTOFF_MONTH`에 있다.
 
-## ⚠️ CSV를 이 repo에 커밋하지 말 것
+## ⚠️ 원본 CSV를 이 repo에 커밋하지 말 것
 
-이 repo는 **공개**이고, 어드민 case-metrics에는 고객 실명·국적·나이·성별·결제금액이
+이 repo는 **공개**이고, 어드민 case-metrics 원본에는 고객 실명·나이·성별이
 행 단위로 들어 있다. `.gitignore`가 `*.csv`를 막아둔 이유다.
 
-대신 **운영 구글시트 안의 별도 탭**에 둔다 — 기존 예약확정 리스트와 같은 접근통제 아래.
+그래서 repo에는 **비식별본만** 둔다. `deidentify_admin.py`가 대시보드가 실제로 쓰는
+20컬럼만 화이트리스트로 남기고 아래를 제거한다:
+
+```
+consulter_name, candidate_name        고객 실명
+consulter_age, candidate_age          나이
+consulter_gender, candidate_gender    성별
+consultation_code, case_id_hash       케이스 식별자
+consultant_name                       상담사 (대시보드 미사용)
+consultation_duration_min, has_notes, booked_hospital_count
+```
+
+화이트리스트 방식이라 어드민이 컬럼을 추가해도 개인정보가 새로 흘러나가지 않는다.
+비식별본으로도 모든 지표(건수·매출·객단가·국적·시술·취소/노쇼)가 동일하게 나온다.
+**비는 것은 고객명 컬럼뿐** — 취소/노쇼 상세와 정산 명세의 이름 칸이 공란이 된다.
+
+## 데이터 원천 우선순위
+
+대시보드는 아래 순서로 어드민 원천을 찾는다:
+
+1. 운영 구글시트의 **`어드민 케이스 raw`** 탭 — 있으면 최우선 (실명 포함, 접근통제 하)
+2. `~/Downloads/case-metrics-*.csv` 최신본 — 로컬 실행용 (실명 포함)
+3. `data/admin_case_metrics.csv` — repo 비식별본 (**배포본이 쓰는 경로**)
+
+고객명까지 대시보드에서 봐야 하면 1번을 만들면 된다. 탭 이름은 `어드민 케이스`가
+포함되기만 하면 인식한다 (`admin_source.ADMIN_SHEET_KEYWORD`).
 
 ## 매달 갱신 방법
 
-1. 어드민에서 case-metrics를 CSV로 내보낸다 (기간은 아래 주의사항 참고)
-2. 운영 구글시트에 **`어드민 케이스 raw`** 탭을 만든다 (없으면 최초 1회)
-3. CSV 전체를 그 탭 A1에 붙여넣는다 (헤더 포함, 기존 내용은 덮어쓰기)
-4. 대시보드 사이드바 "데이터 새로고침" → 끝
-
-탭 이름은 `어드민 케이스`가 포함되기만 하면 인식한다 (`admin_source.ADMIN_SHEET_KEYWORD`).
-로컬 실행 시에는 탭이 없으면 `~/Downloads/case-metrics-*.csv` 최신본을 자동으로 집는다.
+```bash
+# 1. 어드민에서 case-metrics CSV export (기간은 아래 주의사항 참고)
+# 2. 비식별본 생성
+python3 deidentify_admin.py ~/Downloads/case-metrics-YYYYMMDD-HHMM.csv
+# 3. 커밋 → Streamlit Cloud 자동 재배포
+git add data/admin_case_metrics.csv && git commit -m "어드민 데이터 YYYY-MM 갱신" && git push
+```
 
 ### export 기간을 넓게 잡을 것
 
