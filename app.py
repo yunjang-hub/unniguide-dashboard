@@ -214,6 +214,25 @@ def valid_months(values):
     return sorted(out)
 
 
+def last_closed_month():
+    """마감된 최신월 = 지난달. 오늘이 속한 달은 아직 진행 중이라 실적이 미완이다."""
+    return str(pd.Timestamp.today().to_period('M') - 1)
+
+
+def latest_closed(months):
+    """기준월 선택: 마감된 달 중 최신. 없으면 가장 이른 달로 폴백.
+
+    어드민에는 미래 내원일 예약이 들어 있어 그냥 max를 쓰면 진행 중인 달(또는
+    미래 달)이 '최신 성과'로 잡혀 실적이 폭락한 것처럼 보인다.
+    """
+    ms = valid_months(months)
+    if not ms:
+        return None
+    lc = last_closed_month()
+    past = [m for m in ms if m <= lc]
+    return past[-1] if past else ms[0]
+
+
 def finalize_reservations(df_res, source):
     """예약 raw(운영시트/어드민 공통)에 파생 컬럼을 붙인다.
 
@@ -558,9 +577,8 @@ def load_internal_report(df_completed, df_all, df_settle):
             '누적시수술금액': hg['실제금액'].sum().values,
             '누적수수료': hg['_수수료'].sum().values,
         })
-        # 최신월 (집계 가능한 월 중 최댓값)
-        vm_series = comp_h[comp_h['_월'].isin(valid_months(comp_h['_월'].unique()))]['_월']
-        latest = vm_series.max() if len(vm_series) > 0 else None
+        # 최신월 = 마감된 달 중 최신 (진행 중인 달·미래 예약 제외)
+        latest = latest_closed(comp_h['_월'].unique())
         if latest:
             lm = comp_h[comp_h['_월'] == latest].groupby('병원명').agg(
                 최신월건수=('실제금액', 'size'), 최신월금액=('실제금액', 'sum')).reset_index()
@@ -829,9 +847,7 @@ with st.sidebar:
         # 기본 끝점 = 지난달(마지막으로 마감된 달).
         # 어드민에는 미래 내원일 예약이 들어있어 최신월을 그대로 쓰면
         # 진행 중/미래 달이 기본값이 되어 실적이 급락한 것처럼 보인다.
-        last_closed = str((pd.Timestamp.today().to_period('M') - 1))
-        past = [m for m in all_months if m <= last_closed]
-        default_end = past[-1] if past else all_months[-1]
+        default_end = latest_closed(all_months) or all_months[-1]
         month_range = st.select_slider("기간 선택", options=all_months, value=(all_months[0], default_end))
         selected_months = [m for m in all_months if month_range[0] <= m <= month_range[1]]
     else:
@@ -1238,7 +1254,8 @@ with tab3:
         if len(hc) == 0 and len(hs) == 0:
             st.info("선택한 병원의 데이터가 없습니다.")
         else:
-            ref_month = hc_months[-1] if hc_months else (hs_months[-1] if hs_months else None)
+            # 진행 중인 달이 아니라 마감된 최신월을 기준월로 삼는다
+            ref_month = latest_closed(hc_months) or latest_closed(hs_months)
 
             # --- 헤더: 순위 + 누적 요약 ---
             total_h = len(_rev_rank)
@@ -1606,7 +1623,8 @@ with tab7:
     report_month = st.selectbox(
         "리포트 월",
         options=all_months,
-        index=len(all_months) - 1 if all_months else 0,
+        index=(all_months.index(latest_closed(all_months))
+               if latest_closed(all_months) in all_months else len(all_months) - 1),
         format_func=lambda x: f"{x} ({datetime.strptime(x + '-01', '%Y-%m-%d').strftime('%Y년 %m월')})",
         key="report_month_sel",
     )
