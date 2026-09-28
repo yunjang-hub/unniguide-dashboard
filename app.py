@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 언니가이드 인터랙티브 대시보드 (Streamlit) v2
-- 원천 2개를 내원일 기준으로 이어붙임: ~2026-06 운영시트 / 2026-07~ 어드민 case-metrics
+- 원천 2개를 내원일 기준으로 이어붙임: ~2026-06 운영시트 / 2026-07~ 어드민
+  (어드민은 Public API 실시간 조회가 1순위 — secrets UG_PUBLIC_API_KEY, 6시간 캐시)
 - 내부리포트/정산은 raw에서 자동 집계
 - 취소/노쇼 트래킹 포함
 """
@@ -26,6 +27,7 @@ from admin_source import (
     load_admin_case_metrics,
     normalize_admin_frame,
 )
+from admin_api import AdminApiError, load_admin_api_frame
 
 # ============================================================
 # 페이지 설정
@@ -465,6 +467,29 @@ def load_admin_from_gsheet(file_path):
     return _split_admin(normalize_admin_frame(df))
 
 
+ADMIN_API_TTL = 6 * 3600  # 6시간마다 자동 재조회 → 하루 여러 번 최신화
+
+
+def admin_api_key():
+    """Streamlit secrets → 환경변수 순. 로컬에 secrets.toml이 없으면 st.secrets 접근이 예외를 낸다."""
+    try:
+        k = st.secrets.get('UG_PUBLIC_API_KEY', '')
+    except Exception:
+        k = ''
+    return (k or os.environ.get('UG_PUBLIC_API_KEY', '')).strip()
+
+
+@st.cache_data(show_spinner=False, ttl=ADMIN_API_TTL)
+def load_admin_from_api(key):
+    """어드민 Public API /cases 전량 → 예약완료 df + 전체예약 df + 조회 시각.
+
+    결과는 메모리 캐시에만 있고 파일로 남기지 않는다.
+    """
+    df_raw, fetched_at = load_admin_api_frame(key)
+    ad_completed, ad_all = _split_admin(normalize_admin_frame(df_raw))
+    return ad_completed, ad_all, fetched_at
+
+
 def _split_admin(df_admin):
     df_res = finalize_reservations(df_admin, source='어드민')
     df_completed = df_res[df_res['예약상태'] == '시/수술 완료'].copy()
@@ -788,9 +813,18 @@ with st.sidebar:
         # 1순위: 운영시트의 어드민 raw 탭 (배포본) → 2순위: 로컬 Downloads CSV
         if df_completed is not None:
             try:
-                with st.spinner("어드민 데이터 병합 중..."):
-                    ad_completed, ad_all = load_admin_from_gsheet(xlsx_url)
-                    origin = f"시트 '{ADMIN_SHEET_KEYWORD}' 탭"
+                with st.spinner("어드민 데이터 불러오는 중... (API 첫 조회는 30초 안팎)"):
+                    ad_completed = ad_all = None
+                    api_key = admin_api_key()
+                    if api_key:
+                        try:
+                            ad_completed, ad_all, fetched_at = load_admin_from_api(api_key)
+                            origin = f"어드민 API · {fetched_at} 조회"
+                        except AdminApiError as e:
+                            st.warning(f"어드민 API 조회 실패, 대체 원천 사용: {e}")
+                    if ad_all is None:
+                        ad_completed, ad_all = load_admin_from_gsheet(xlsx_url)
+                        origin = f"시트 '{ADMIN_SHEET_KEYWORD}' 탭"
                     if ad_all is None:
                         admin_csv = resolve_admin_csv()
                         if admin_csv:

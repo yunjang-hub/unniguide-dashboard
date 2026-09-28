@@ -10,6 +10,26 @@
 
 컷오프는 `admin_source.py`의 `ADMIN_CUTOFF_MONTH`에 있다.
 
+## 1순위: 어드민 Public API 실시간 조회 (2026-09-28~)
+
+`admin_api.py`가 `/cases?include=hospitals` 전량을 불러 case-metrics 스키마로 바꾼다.
+결과는 **메모리 캐시(6시간)에만** 있고 파일로 남지 않는다 → 손으로 export·커밋할 일이 없다.
+
+- 키: Streamlit Cloud → 앱 Settings → **Secrets**에 `UG_PUBLIC_API_KEY = "ug_live_..."` (스코프 `read:cases`)
+  로컬은 `.streamlit/secrets.toml` 또는 환경변수 `UG_PUBLIC_API_KEY`. ⚠️ 키를 repo에 커밋 금지.
+- 갱신: 6시간마다 자동 재조회. 즉시 반영은 사이드바 "데이터 새로고침".
+- 사이드바에 `어드민 병합 완료 (어드민 API · YYYY-MM-DD HH:MM 조회)`가 뜨면 API 경로로 동작 중.
+- API 실패·키 없음 → 아래 원천 순서로 자동 폴백(시트 탭 → Downloads CSV → repo 비식별본).
+
+export와 다른 점:
+- 행 단위: API는 케이스×병원 1행 + `companion_count`. 동반자 수만큼 금액 0인 COMPANION 행을 덧붙여
+  인원 수를 맞춘다(API `actual_amount`는 동반자 몫 포함).
+- `treatments`(시술명)는 API에 없어 공란 → 시술 트렌드 탭은 2026-07 이후 커버율 0%.
+  개발팀 필드 추가 후 `admin_api.cases_to_frame`에 매핑만 추가하면 된다.
+- `language`·`hospital_region`도 공란(대시보드 집계 미사용, 지역은 `HOSPITAL_GU`로 판별).
+- 검증(2026-09-28 조회, 내원일 기준 완료): 08월 508명/452,612,206원 · 09월(진행 중) 539명/473,274,007원.
+  내원일 없는 완료 6건(6,009,900원), 내원일 연도 오타 2029-09 1건은 어드민 원천 수정 필요.
+
 ## ⚠️ 원본 CSV를 이 repo에 커밋하지 말 것
 
 이 repo는 **공개**이고, 어드민 case-metrics 원본에는 고객 실명·나이·성별이
