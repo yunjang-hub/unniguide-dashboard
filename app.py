@@ -301,6 +301,11 @@ def finalize_reservations(df_res, source):
     return df_res
 
 
+# 1MNG 공개 시트 안에서 재무팀 원본 정산(1pNQ 언니가이드_운영)을 IMPORTRANGE로 받는 탭 이름 키워드.
+# 병원별 매출, 국적의 기준 원천이다.
+SETTLE_LINK_KEYWORD = '정산 연동'
+
+
 @st.cache_data(show_spinner=False, ttl=600)
 def load_operation_excel(file_path):
     """운영 트렌드 Excel → 예약완료 df + 정산 df + 전체예약 df"""
@@ -367,11 +372,10 @@ def load_operation_excel(file_path):
     # 정산 시트 (openpyxl)
     wb = openpyxl.load_workbook(file_path, read_only=True, data_only=True)
     # 시트 이름 호환: 로컬 Excel vs Google Sheets
-    settle_sheet = None
-    for name in wb.sheetnames:
-        if '정산' in name:
-            settle_sheet = name
-            break
+    # 1순위: 재무팀 원본(1pNQ)을 IMPORTRANGE로 끌어온 '정산 연동' 탭 → 2순위: 기존 정산 탭
+    settle_sheet = next((n for n in wb.sheetnames if SETTLE_LINK_KEYWORD in n), None)
+    if settle_sheet is None:
+        settle_sheet = next((n for n in wb.sheetnames if '정산' in n), None)
     if settle_sheet is None:
         raise ValueError(f"정산 시트를 찾을 수 없습니다. 시트 목록: {wb.sheetnames}")
     ws2 = wb[settle_sheet]
@@ -438,6 +442,8 @@ def _agg_month_series(df):
     if '예약확정일' in df.columns:
         m = m.fillna(pd.to_datetime(df['예약확정일'], errors='coerce'))
     return month_str(m)
+
+
 
 
 @st.cache_data(show_spinner=False, ttl=600)
@@ -532,13 +538,14 @@ def merge_sources(op_completed, op_all, op_settle, ad_completed, ad_all,
     for _d in (df_completed, df_all):
         _d['월'] = _d['월'].where(_d['월'].notna(), 'NaT').astype(str)
 
-    # 정산 우선순위: ① 확정 정산 override → ② 정산 시트(컷오프 전) → ③ 어드민 자동산출
-    # 컷오프 이후는 정산 시트에 아직 없어서 자동산출(실제금액×시술10%/수술20%)로 메우지만,
+    # 정산 우선순위: ① 확정 정산 override → ② 정산 시트(재무팀 원본, 월 무관) → ③ 어드민 자동산출
+    # 정산 시트에 아직 없는 달만 자동산출(실제금액×시술10%/수술20%)로 메운다.
     # 손으로 검토·보정한 월(override)이 있으면 그쪽이 정답이다.
     settle_parts = []
+    sheet_settle_months = set()
     if op_settle is not None and len(op_settle) > 0:
-        base = op_settle[(op_settle['정산월'] < cutoff)
-                         & (~op_settle['정산월'].isin(ov_months))]
+        base = op_settle[~op_settle['정산월'].isin(ov_months)]
+        sheet_settle_months = set(base['정산월'].unique())
         settle_parts.append(base.copy())
     if len(ad_c) > 0:
         ad_settle = pd.DataFrame({
@@ -552,7 +559,8 @@ def merge_sources(op_completed, op_all, op_settle, ad_completed, ad_all,
         ad_settle['수수료금액'] = ad_settle.apply(
             lambda r: _commission(r['시술금액'], r['구분']), axis=1)
         ad_settle = ad_settle[(ad_settle['시술금액'] > 0)
-                              & (~ad_settle['정산월'].isin(ov_months))]
+                              & (~ad_settle['정산월'].isin(ov_months))
+                              & (~ad_settle['정산월'].isin(sheet_settle_months))]
         settle_parts.append(ad_settle)
     if ov_months:
         settle_parts.append(settle_override)
@@ -793,6 +801,7 @@ with st.sidebar:
     data_source = st.radio("데이터 소스", ["Google Sheets (자동)", "로컬 파일"], index=0)
 
     df_completed = df_settle = df_all = None
+    df_settle_sheet = None  # 병원 매출 순위용 — 정산 시트 원본(병합 전)
     df_monthly = df_hosp_perf = cancel_summary = df_cancel_hospital = df_cancel_detail = None
     seam_info = None
 
@@ -805,6 +814,7 @@ with st.sidebar:
             with st.spinner("운영 데이터 로딩 중..."):
                 xlsx_url = gsheet_xlsx_url(GSHEET_ID_MAIN)
                 df_completed, df_settle, df_all = load_operation_excel(xlsx_url)
+                df_settle_sheet = df_settle.copy()
             st.success("운영 데이터 로드 완료")
         except Exception as e:
             st.error(f"운영 데이터 로드 실패: {str(e)[:50]}")
@@ -1227,6 +1237,96 @@ with tab2:
 # Tab 3: 병원 분석
 # ============================================================
 with tab3:
+    # ------------------------------------------------------------
+    # 기간별 병원 매출 순위 — 재무팀 정산 원본(1pNQ 언니가이드_운영) 기준
+    # 매출, 국적 모두 정산 시트 값을 쓴다(어드민 자동산출, 예약 raw 아님).
+    # ------------------------------------------------------------
+    st.subheader("🏆 기간별 병원 매출 순위")
+    rank_src = df_settle_sheet if df_settle_sheet is not None else df_settle
+    rank_months = valid_months(rank_src['정산월'].unique()) if rank_src is not None and len(rank_src) > 0 else []
+    if not rank_months:
+        st.info("정산 데이터가 없어 순위를 만들 수 없습니다.")
+    else:
+        st.caption(
+            f"기준: 재무팀 정산 요청 리스트 (정산월 기준), 보유 기간 {rank_months[0]} ~ {rank_months[-1]}")
+        rc1, rc2 = st.columns(2)
+        with rc1:
+            r_start = st.selectbox("시작월", rank_months, index=len(rank_months) - 1, key="rank_start")
+        with rc2:
+            end_opts = [m for m in rank_months if m >= r_start]
+            r_end = st.selectbox("종료월", end_opts, index=len(end_opts) - 1, key="rank_end")
+
+        rs = rank_src[(rank_src['정산월'] >= r_start) & (rank_src['정산월'] <= r_end)].copy()
+        rs = rs[rs['시술금액'] > 0]
+        rs['국적'] = rs['국적'].fillna('').astype(str).str.strip().replace('', '미기입')
+        if len(rs) == 0:
+            st.info("선택한 기간에 정산 내역이 없습니다.")
+        else:
+            total_amt = rs['시술금액'].sum()
+            rank = (rs.groupby('병원명')
+                      .agg(정산매출=('시술금액', 'sum'), 건수=('시술금액', 'size'),
+                           수수료=('수수료금액', 'sum'))
+                      .sort_values('정산매출', ascending=False).reset_index())
+            rank.insert(0, '순위', range(1, len(rank) + 1))
+            rank['비중'] = rank['정산매출'] / total_amt * 100
+            rank['객단가'] = rank['정산매출'] / rank['건수']
+
+            # 병원별 주요 국적 TOP3 (매출 비중)
+            nat_amt = rs.groupby(['병원명', '국적'])['시술금액'].sum().reset_index()
+            def _top_nat(g):
+                g = g.sort_values('시술금액', ascending=False)
+                tot = g['시술금액'].sum()
+                return ', '.join(f"{r.국적} {r.시술금액 / tot * 100:.0f}%" for r in g.head(3).itertuples())
+            top_nat = nat_amt.groupby('병원명').apply(_top_nat).rename('주요 국적 (매출 비중)')
+            rank = rank.merge(top_nat, left_on='병원명', right_index=True, how='left')
+
+            k1, k2, k3, k4 = st.columns(4)
+            k1.metric("기간 정산 매출", format_krw(total_amt))
+            k2.metric("정산 건수", f"{len(rs):,}건")
+            k3.metric("매출 발생 병원", f"{len(rank)}곳")
+            top3_share = rank.head(3)['정산매출'].sum() / total_amt * 100
+            k4.metric("TOP3 병원 집중도", f"{top3_share:.0f}%")
+
+            top_n = rank.head(15).sort_values('정산매출')
+            fig_rank = px.bar(top_n, x='정산매출', y='병원명', orientation='h',
+                              color_discrete_sequence=[BRAND_ORANGE],
+                              text=[format_krw(v) for v in top_n['정산매출']])
+            period_txt = r_start if r_start == r_end else f"{r_start} ~ {r_end}"
+            fig_rank.update_layout(title=f"병원 매출 순위 TOP 15 ({period_txt})",
+                                   height=max(400, len(top_n) * 35), margin=dict(l=180, t=50),
+                                   xaxis_title="정산 매출(원)", yaxis_title="")
+            fig_rank.update_traces(textposition='outside', cliponaxis=False)
+            st.plotly_chart(fig_rank, use_container_width=True)
+
+            show = rank[['순위', '병원명', '정산매출', '비중', '건수', '객단가', '수수료',
+                         '주요 국적 (매출 비중)']]
+            st.dataframe(
+                show, hide_index=True, use_container_width=True,
+                column_config={
+                    '정산매출': st.column_config.NumberColumn('정산 매출', format='%,d원'),
+                    '비중': st.column_config.NumberColumn('매출 비중', format='%.1f%%'),
+                    '건수': st.column_config.NumberColumn('건수', format='%,d건'),
+                    '객단가': st.column_config.NumberColumn('객단가', format='%,d원'),
+                    '수수료': st.column_config.NumberColumn('수수료', format='%,d원'),
+                })
+
+            with st.expander("🌍 병원 × 국적 매출 상세 (정산 기준)"):
+                top_nats = rs.groupby('국적')['시술금액'].sum().sort_values(ascending=False).head(10).index
+                pv = (rs.assign(국적=rs['국적'].where(rs['국적'].isin(top_nats), '기타'))
+                        .pivot_table(index='병원명', columns='국적', values='시술금액',
+                                     aggfunc='sum', fill_value=0))
+                pv = pv[[c for c in list(top_nats) + ['기타'] if c in pv.columns]]
+                pv = pv.loc[rank['병원명']]
+                view = st.radio("표시", ["매출 비중(%)", "매출(원)"], horizontal=True, key="rank_nat_view")
+                if view == "매출 비중(%)":
+                    st.dataframe(pv.div(pv.sum(axis=1), axis=0).mul(100).round(1)
+                                   .style.format('{:.1f}%'),
+                                 use_container_width=True)
+                else:
+                    st.dataframe(pv.style.format('{:,.0f}'), use_container_width=True)
+                st.caption("국적 TOP 10 외는 '기타'로 묶음, 국적 칸이 빈 정산 건은 '미기입'")
+
+    st.divider()
     st.subheader("병원별 성과")
     st.caption(f"데이터 기간: {period_label} | 정산 데이터 기준")
 
