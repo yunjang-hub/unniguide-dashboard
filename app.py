@@ -881,7 +881,13 @@ with st.sidebar:
                 _fm = valid_months(_fin['정산월'].unique())
                 st.success(f"재무팀 정산 연결 완료 ({_fm[0]} ~ {_fm[-1]})")
             except Exception as e:
-                st.warning(f"재무팀 정산 탭 연결 실패, 사본 시트 정산 사용: {str(e)[:80]}")
+                # 서비스 계정이 없어도 사본 시트의 '정산 연동' 탭(IMPORTRANGE)이 같은 원본을 준다.
+                # 그 탭이 지난달까지 채워져 있으면 정상이므로 경고 대신 출처만 표시한다.
+                _sm = valid_months(df_settle['정산월'].unique()) if len(df_settle) > 0 else []
+                if _sm and _sm[-1] >= last_closed_month():
+                    st.success(f"재무팀 정산 연결 완료 (정산 연동 탭 · {_sm[0]} ~ {_sm[-1]})")
+                else:
+                    st.warning(f"재무팀 정산 탭 연결 실패, 사본 시트 정산 사용: {str(e)[:80]}")
 
         # 2026-07 이후 내원분은 어드민 원천으로 교체
         # 1순위: 운영시트의 어드민 raw 탭 (배포본) → 2순위: 로컬 Downloads CSV
