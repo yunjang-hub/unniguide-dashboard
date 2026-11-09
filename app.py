@@ -469,14 +469,18 @@ def load_operation_excel(file_path):
     wb = openpyxl.load_workbook(file_path, read_only=True, data_only=True)
     # 시트 이름 호환: 로컬 Excel vs Google Sheets
     # 1순위: 재무팀 원본(1pNQ)을 IMPORTRANGE로 끌어온 '정산 연동' 탭 → 2순위: 기존 정산 탭
-    settle_sheet = next((n for n in wb.sheetnames if SETTLE_LINK_KEYWORD in n), None)
-    if settle_sheet is None:
-        settle_sheet = next((n for n in wb.sheetnames if '정산' in n), None)
-    if settle_sheet is None:
+    # 연동 탭이 #REF!(IMPORTRANGE 액세스 미허용) 등으로 비어 있으면 기존 정산 탭으로 넘어간다.
+    candidates = ([n for n in wb.sheetnames if SETTLE_LINK_KEYWORD in n]
+                  + [n for n in wb.sheetnames if '정산' in n and SETTLE_LINK_KEYWORD not in n])
+    if not candidates:
         raise ValueError(f"정산 시트를 찾을 수 없습니다. 시트 목록: {wb.sheetnames}")
-    ws2 = wb[settle_sheet]
-    settlement_records = parse_settlement_rows(
-        [c.value for c in row] for row in ws2.iter_rows(min_row=1, max_row=ws2.max_row))
+    settlement_records = []
+    for settle_sheet in candidates:
+        ws2 = wb[settle_sheet]
+        settlement_records = parse_settlement_rows(
+            [c.value for c in row] for row in ws2.iter_rows(min_row=1, max_row=ws2.max_row))
+        if settlement_records:
+            break
     wb.close()
     df_settle = pd.DataFrame(settlement_records)
 
