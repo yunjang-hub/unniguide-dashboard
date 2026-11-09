@@ -938,16 +938,7 @@ if not all_months:
 with st.sidebar:
     st.divider()
     st.subheader("필터")
-    if len(all_months) >= 2:
-        # 기본 끝점 = 지난달(마지막으로 마감된 달).
-        # 어드민에는 미래 내원일 예약이 들어있어 최신월을 그대로 쓰면
-        # 진행 중/미래 달이 기본값이 되어 실적이 급락한 것처럼 보인다.
-        default_end = latest_closed(all_months) or all_months[-1]
-        month_range = st.select_slider("기간 선택", options=all_months, value=(all_months[0], default_end))
-        selected_months = [m for m in all_months if month_range[0] <= m <= month_range[1]]
-    else:
-        selected_months = all_months
-        month_range = (all_months[0], all_months[0])
+    st.caption("기간은 탭마다 따로 선택합니다. 국적·병원 필터는 모든 탭에 적용됩니다.")
 
     all_nationalities = sorted([n for n in df_completed['고객국적'].unique() if n and n != 'nan'])
     selected_nationalities = st.multiselect("국적", all_nationalities, default=[], placeholder="전체 국적")
@@ -977,9 +968,9 @@ with st.sidebar:
         </div>
         """, unsafe_allow_html=True)
 
-# 필터 적용
-mask_res = df_completed['월'].isin(selected_months)
-mask_set = df_settle['정산월'].isin(selected_months) if len(df_settle) > 0 else pd.Series(dtype=bool)
+# 필터 적용 (국적·병원 — 전 탭 공통). 기간은 탭마다 tab_period()로 따로 고른다.
+mask_res = pd.Series(True, index=df_completed.index)
+mask_set = pd.Series(True, index=df_settle.index) if len(df_settle) > 0 else pd.Series(dtype=bool)
 if selected_nationalities:
     mask_res = mask_res & df_completed['고객국적'].isin(selected_nationalities)
     if len(df_settle) > 0:
@@ -989,22 +980,48 @@ if selected_hospitals:
     if len(df_settle) > 0:
         mask_set = mask_set & df_settle['병원명'].isin(selected_hospitals)
 
-filtered_res = df_completed[mask_res].copy()
-filtered_set = df_settle[mask_set].copy() if len(df_settle) > 0 else pd.DataFrame()
+base_res = df_completed[mask_res].copy()
+base_set = df_settle[mask_set].copy() if len(df_settle) > 0 else pd.DataFrame()
+
+# 기간 기본 끝점 = 지난달(마지막으로 마감된 달).
+# 어드민에는 미래 내원일 예약이 들어있어 최신월을 그대로 쓰면
+# 진행 중/미래 달이 기본값이 되어 실적이 급락한 것처럼 보인다.
+DEFAULT_END = latest_closed(all_months) or all_months[-1]
+
+
+def tab_period(key):
+    """탭 안에 기간 슬라이더를 그리고, 그 탭에서 쓸 기간·필터 결과를 돌려준다.
+
+    탭마다 key가 달라 선택값이 서로 독립적이다.
+    반환: (selected_months, month_range, period_label, filtered_res, filtered_set,
+           latest_month, prev_month)
+    """
+    if len(all_months) >= 2:
+        rng = st.select_slider("📅 기간 (이 탭에만 적용)", options=all_months,
+                               value=(all_months[0], DEFAULT_END), key=f"period_{key}")
+    else:
+        rng = (all_months[0], all_months[0])
+    sel = [m for m in all_months if rng[0] <= m <= rng[1]]
+    f_res = base_res[base_res['월'].isin(sel)].copy()
+    f_set = base_set[base_set['정산월'].isin(sel)].copy() if len(base_set) > 0 else pd.DataFrame()
+    label = f"{rng[0]} ~ {rng[1]}" if rng[0] != rng[1] else rng[0]
+    latest = sel[-1] if sel else None
+    prevs = [m for m in all_months if m < latest] if latest else []
+    return sel, rng, label, f_res, f_set, latest, (prevs[-1] if prevs else None)
 
 # ============================================================
 # 헤더
 # ============================================================
-period_label = f"{month_range[0]} ~ {month_range[1]}" if month_range[0] != month_range[1] else month_range[0]
+_held = f"{all_months[0]} ~ {DEFAULT_END}"
 st.markdown(f"""
 <div style="background: linear-gradient(135deg, {BRAND_ORANGE} 0%, #E8551F 100%);
      color: white; padding: 28px 32px; border-radius: 0 0 20px 20px; margin: -1rem -1rem 24px -1rem;">
     <div style="display:flex; justify-content:space-between; align-items:center;">
         <div>
             <div style="font-size:14px; opacity:0.85; margin-bottom:4px;">UNNI GUIDE 운영 대시보드</div>
-            <div style="font-size:24px; font-weight:800;">{period_label} 데이터</div>
+            <div style="font-size:24px; font-weight:800;">{_held} 데이터</div>
         </div>
-        <div style="font-size:13px; opacity:0.75;">예약 {len(filtered_res):,}건 · 정산 {len(filtered_set):,}건</div>
+        <div style="font-size:13px; opacity:0.75;">기간은 탭마다 따로 선택</div>
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -1017,15 +1034,13 @@ tab1, tab2, tab3, tab4, tab8, tab5, tab6, tab7 = st.tabs([
     "🔪 시술/수술 구분", "⚠️ 취소/No-show", "📋 원본 데이터", "📦 리포트 생성"
 ])
 
-# 공통: 최신월/전월
-latest_month = selected_months[-1] if selected_months else None
-prev_candidates = [m for m in all_months if m < latest_month] if latest_month else []
-prev_month = prev_candidates[-1] if prev_candidates else None
 
 # ============================================================
 # Tab 1: Overview (필터 반응 단일 구조)
 # ============================================================
 with tab1:
+    selected_months, month_range, period_label, filtered_res, filtered_set, latest_month, prev_month = tab_period("overview")
+
     def pct_delta(cur, prev):
         return f"{(cur - prev) / max(prev, 1) * 100:+.1f}%" if prev > 0 else None
 
@@ -1159,6 +1174,7 @@ with tab1:
 # ============================================================
 with tab2:
     st.subheader("국적별 고객 분석")
+    selected_months, month_range, period_label, filtered_res, filtered_set, latest_month, prev_month = tab_period("nation")
     st.caption(f"데이터 기간: {period_label} | 정산 데이터 기준")
 
     if len(filtered_set) > 0:
@@ -1242,13 +1258,27 @@ with tab3:
     # 매출, 국적 모두 정산 시트 값을 쓴다(어드민 자동산출, 예약 raw 아님).
     # ------------------------------------------------------------
     st.subheader("🏆 기간별 병원 매출 순위")
-    rank_src = df_settle_sheet if df_settle_sheet is not None else df_settle
+    # 재무팀 정산 시트에 있는 달은 그 원본을, 없는 달(컷오프 이후)은 병합 정산
+    # (확정 정산 override → 어드민 자동산출)을 이어 붙인다.
+    if df_settle_sheet is not None and len(df_settle_sheet) > 0:
+        _sheet_m = set(valid_months(df_settle_sheet['정산월'].unique()))
+        _rest = df_settle[~df_settle['정산월'].isin(_sheet_m)] if len(df_settle) > 0 else df_settle
+        rank_src = pd.concat([df_settle_sheet, _rest], ignore_index=True, sort=False)
+    else:
+        _sheet_m = set()
+        rank_src = df_settle
     rank_months = valid_months(rank_src['정산월'].unique()) if rank_src is not None and len(rank_src) > 0 else []
+    rank_months = [m for m in rank_months if m <= DEFAULT_END] or rank_months
     if not rank_months:
         st.info("정산 데이터가 없어 순위를 만들 수 없습니다.")
     else:
+        _ov = (seam_info or {}).get('settle_override_months') or []
+        _est = [m for m in rank_months if m not in _sheet_m and m not in _ov]
         st.caption(
-            f"기준: 재무팀 정산 요청 리스트 (정산월 기준), 보유 기간 {rank_months[0]} ~ {rank_months[-1]}")
+            f"기준: 정산월, 보유 기간 {rank_months[0]} ~ {rank_months[-1]} · "
+            f"재무팀 정산 시트 {min(_sheet_m) + ' ~ ' + max(_sheet_m) if _sheet_m else '-'}"
+            + (f" · 확정 정산 {', '.join(_ov)}" if _ov else '')
+            + (f" · 어드민 자동산출(추정) {_est[0]} ~ {_est[-1]}" if _est else ''))
         rc1, rc2 = st.columns(2)
         with rc1:
             r_start = st.selectbox("시작월", rank_months, index=len(rank_months) - 1, key="rank_start")
@@ -1328,6 +1358,7 @@ with tab3:
 
     st.divider()
     st.subheader("병원별 성과")
+    selected_months, month_range, period_label, filtered_res, filtered_set, latest_month, prev_month = tab_period("hospital")
     st.caption(f"데이터 기간: {period_label} | 정산 데이터 기준")
 
     # 내부리포트 병원별 성과가 있으면 우선 사용
@@ -1566,6 +1597,7 @@ with tab3:
 # ============================================================
 with tab4:
     st.subheader("시술 트렌드")
+    selected_months, month_range, period_label, filtered_res, filtered_set, latest_month, prev_month = tab_period("procedure")
     st.caption(f"데이터 기간: {period_label} | 전체 예약 데이터 기준 (시/수술 완료 + 예약확정 포함)")
 
     # 시술 데이터: 완료건뿐 아니라 전체 예약 중 시술명이 있는 건 활용
@@ -1686,6 +1718,7 @@ with tab4:
 # ============================================================
 with tab8:
     st.subheader("시술 / 수술 구분 분석")
+    selected_months, month_range, period_label, filtered_res, filtered_set, latest_month, prev_month = tab_period("kind")
     st.caption(f"데이터 기간: {period_label} | 수수료 = 시술 10% · 수술 20%")
 
     ps = filtered_res[filtered_res['종류'].isin(['시술', '수술'])].copy()
@@ -1973,29 +2006,43 @@ with tab8:
 # ============================================================
 with tab5:
     st.subheader("취소 / No-show 트래킹")
-    st.caption("데이터 기간: 전체 누적 | 내부리포트 기준")
+    _sel5, _, _label5, _, _, _, _ = tab_period("cancel")
+    # 다른 탭(리포트 생성 등)이 쓰는 전체 집계를 덮어쓰지 않도록 이 탭 전용 이름을 쓴다
+    df_monthly_t5, df_hosp_perf_t5, cancel_summary_t5, df_cancel_hospital_t5, df_cancel_detail_t5 = \
+        df_monthly, df_hosp_perf, cancel_summary, df_cancel_hospital, df_cancel_detail
+    st.caption(f"데이터 기간: {_label5} | 내부리포트 기준")
+    if df_all is not None and len(_sel5) < len(all_months):
+        # 선택 기간만 남겨 다시 집계 (월 단위 = 내원 집계월)
+        _c5 = df_completed[df_completed['월'].isin(_sel5)]
+        _a5 = df_all[df_all['월'].isin(_sel5)]
+        _s5 = df_settle[df_settle['정산월'].isin(_sel5)] if len(df_settle) > 0 else df_settle
+        try:
+            df_monthly_t5, df_hosp_perf_t5, cancel_summary_t5, df_cancel_hospital_t5, df_cancel_detail_t5 = \
+                load_internal_report(_c5, _a5, _s5)
+        except Exception as e:
+            st.warning(f"선택 기간 재집계 실패, 전체 누적으로 표시: {str(e)[:60]}")
 
-    if cancel_summary is not None:
+    if cancel_summary_t5 is not None:
         # 전체 요약
         c1, c2, c3 = st.columns(3)
-        c1.metric("총 취소", f"{cancel_summary['total_cancel']}건")
-        c2.metric("총 No-show", f"{cancel_summary['total_noshow']}건")
-        c3.metric("취소+노쇼율", cancel_summary['cancel_rate'])
+        c1.metric("총 취소", f"{cancel_summary_t5['total_cancel']}건")
+        c2.metric("총 No-show", f"{cancel_summary_t5['total_noshow']}건")
+        c3.metric("취소+노쇼율", cancel_summary_t5['cancel_rate'])
 
         st.markdown("")
 
         # 월별 취소+노쇼 추이
-        if df_monthly is not None:
+        if df_monthly_t5 is not None:
             st.subheader("월별 취소+노쇼 추이")
             fig_cn = go.Figure()
             fig_cn.add_trace(go.Bar(
-                x=df_monthly['월'], y=df_monthly['취소노쇼'].apply(lambda x: int(x) if pd.notna(x) else 0),
+                x=df_monthly_t5['월'], y=df_monthly_t5['취소노쇼'].apply(lambda x: int(x) if pd.notna(x) else 0),
                 name='취소+노쇼', marker_color=BRAND_RED, opacity=0.8,
-                text=df_monthly['취소노쇼'].apply(lambda x: int(x) if pd.notna(x) else 0), textposition='outside',
+                text=df_monthly_t5['취소노쇼'].apply(lambda x: int(x) if pd.notna(x) else 0), textposition='outside',
             ))
-            cancel_rate_monthly = (df_monthly['취소노쇼'] / (df_monthly['완료건수'] + df_monthly['취소노쇼']) * 100).round(1)
+            cancel_rate_monthly = (df_monthly_t5['취소노쇼'] / (df_monthly_t5['완료건수'] + df_monthly_t5['취소노쇼']) * 100).round(1)
             fig_cn.add_trace(go.Scatter(
-                x=df_monthly['월'], y=cancel_rate_monthly,
+                x=df_monthly_t5['월'], y=cancel_rate_monthly,
                 name='취소+노쇼율(%)', line=dict(color=BRAND_PLUM, width=2.5),
                 mode='lines+markers+text', yaxis='y2',
                 text=[f"{v}%" for v in cancel_rate_monthly], textposition='top center',
@@ -2007,11 +2054,11 @@ with tab5:
             st.plotly_chart(fig_cn, use_container_width=True)
 
         # 병원별 취소/노쇼 현황
-        if df_cancel_hospital is not None and len(df_cancel_hospital) > 0:
+        if df_cancel_hospital_t5 is not None and len(df_cancel_hospital_t5) > 0:
             st.subheader("병원별 취소/No-show 현황")
 
             fig_ch = go.Figure()
-            df_ch = df_cancel_hospital.sort_values('취소노쇼율', ascending=True)
+            df_ch = df_cancel_hospital_t5.sort_values('취소노쇼율', ascending=True)
             fig_ch.add_trace(go.Bar(x=df_ch['취소'], y=df_ch['병원명'], name='취소', orientation='h', marker_color=BRAND_ORANGE))
             fig_ch.add_trace(go.Bar(x=df_ch['No-show'], y=df_ch['병원명'], name='No-show', orientation='h', marker_color=BRAND_RED))
             fig_ch.update_layout(
@@ -2022,16 +2069,16 @@ with tab5:
             st.plotly_chart(fig_ch, use_container_width=True)
 
             # 테이블
-            disp_cn = df_cancel_hospital.sort_values('취소노쇼율', ascending=False).copy()
+            disp_cn = df_cancel_hospital_t5.sort_values('취소노쇼율', ascending=False).copy()
             disp_cn['취소노쇼율'] = (disp_cn['취소노쇼율'] * 100).round(1).astype(str) + '%'
             st.dataframe(disp_cn, use_container_width=True, hide_index=True)
 
         # 상세 내역
-        if df_cancel_detail is not None and len(df_cancel_detail) > 0:
+        if df_cancel_detail_t5 is not None and len(df_cancel_detail_t5) > 0:
             st.subheader("취소/No-show 상세 내역")
             # 필터
-            status_filter = st.multiselect("상태", df_cancel_detail['상태'].unique().tolist(), default=df_cancel_detail['상태'].unique().tolist(), key="cn_status")
-            filtered_cn = df_cancel_detail[df_cancel_detail['상태'].isin(status_filter)]
+            status_filter = st.multiselect("상태", df_cancel_detail_t5['상태'].unique().tolist(), default=df_cancel_detail_t5['상태'].unique().tolist(), key="cn_status")
+            filtered_cn = df_cancel_detail_t5[df_cancel_detail_t5['상태'].isin(status_filter)]
             if selected_hospitals:
                 filtered_cn = filtered_cn[filtered_cn['병원명'].isin(selected_hospitals)]
             st.dataframe(filtered_cn.sort_values('월', ascending=False), use_container_width=True, hide_index=True, height=400)
@@ -2052,6 +2099,7 @@ with tab5:
 # ============================================================
 with tab6:
     st.subheader("원본 데이터 조회 및 다운로드")
+    selected_months, month_range, period_label, filtered_res, filtered_set, latest_month, prev_month = tab_period("raw")
     data_type = st.radio("데이터 선택", ["예약 완료 데이터", "정산 데이터", "전체 예약 (취소/노쇼 포함)"], horizontal=True)
 
     if data_type == "예약 완료 데이터":
