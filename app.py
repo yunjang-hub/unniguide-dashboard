@@ -305,6 +305,102 @@ def finalize_reservations(df_res, source):
 # 병원별 매출, 국적의 기준 원천이다.
 SETTLE_LINK_KEYWORD = '정산 연동'
 
+# 재무팀 정산 원본: 언니가이드_운영 시트의 '정산 요청 리스트(재무팀 공유)' 탭.
+# 링크 공개가 아니라서 Streamlit Secrets의 gcp_service_account로 인증해 이 탭만 CSV로 받는다.
+FINANCE_SHEET_ID = "1pNQiaK67nz6FhxssxgWvoiQr6YwT-5MCwDVvqUZW1SY"
+FINANCE_SETTLE_GID = 622724794
+
+
+def _gcp_session():
+    """secrets의 서비스 계정 → AuthorizedSession. 없으면 None."""
+    try:
+        info = dict(st.secrets["gcp_service_account"])
+    except Exception:
+        return None
+    from google.oauth2.service_account import Credentials
+    from google.auth.transport.requests import AuthorizedSession
+    creds = Credentials.from_service_account_info(info, scopes=[
+        "https://www.googleapis.com/auth/spreadsheets.readonly",
+        "https://www.googleapis.com/auth/drive.readonly",
+    ])
+    return AuthorizedSession(creds)
+
+
+@st.cache_data(show_spinner=False, ttl=600)
+def load_finance_settlement():
+    """재무팀 정산 탭 → df_settle 스키마. 실패하면 예외(호출부가 사유를 표시)."""
+    import csv, io
+    sess = _gcp_session()
+    if sess is None:
+        raise RuntimeError("Secrets에 gcp_service_account 없음")
+    url = (f"https://docs.google.com/spreadsheets/d/{FINANCE_SHEET_ID}"
+           f"/export?format=csv&gid={FINANCE_SETTLE_GID}")
+    r = sess.get(url, timeout=60)
+    if r.status_code != 200 or 'text/csv' not in r.headers.get('content-type', ''):
+        raise RuntimeError(f"HTTP {r.status_code} (서비스 계정에 운영시트 뷰어 권한 필요)")
+    rows = list(csv.reader(io.StringIO(r.content.decode('utf-8-sig'))))
+    df = pd.DataFrame(parse_settlement_rows(rows))
+    if len(df) == 0:
+        raise RuntimeError("정산 행을 하나도 읽지 못함")
+    return df
+
+
+def parse_settlement_rows(rows):
+    """정산 요청 리스트 탭의 행(값 리스트) → 정산 레코드 list. xlsx·csv 공용."""
+    settlement_records = []
+    current_month = None
+    for vals in rows:
+        vals = list(vals) + [None] * max(0, 9 - len(vals))
+        vals = [None if v == '' else v for v in vals]
+        a_val = str(vals[0]).strip() if vals[0] else ''
+        if '정산 내역' in a_val:
+            parts = a_val.replace('년', '-').replace('월', '').replace('정산 내역', '').strip()
+            try:
+                year, month = parts.split('-')[:2]
+                current_month = f"{year.strip()}-{int(month.strip()):02d}"
+            except Exception:
+                pass
+            continue
+        if a_val in ('NO', 'NO.', '', 'None', '재무팀 정산 요청 내역') or '정산 요청일' in a_val:
+            continue
+        if current_month and vals[1]:
+            hospital = str(vals[1]).strip()
+            if hospital in ('병원명', ''):
+                continue
+
+            def _to_num(v):
+                if v is None or v == '':
+                    return None
+                if isinstance(v, (int, float)):
+                    return float(v)
+                try:
+                    return float(str(v).replace('₩', '').replace(',', '').strip())
+                except ValueError:
+                    return None
+
+            # 구분(시술/수술 텍스트)과 시술금액(숫자) 칸이 일부 월에서 바뀌어 입력됨
+            # → 숫자인 칸 = 금액, 텍스트인 칸 = 구분 으로 자동 판별
+            c6, c7 = vals[6], vals[7]
+            n6, n7 = _to_num(c6), _to_num(c7)
+            if n6 is not None and n7 is None:
+                amount, kind = n6, str(c7).strip() if c7 else ''
+            elif n7 is not None and n6 is None:
+                amount, kind = n7, str(c6).strip() if c6 else ''
+            else:
+                # 판별 불가 시 헤더 순서(구분=6, 금액=7) 사용
+                amount = n7 if n7 is not None else 0
+                kind = str(c6).strip() if c6 else ''
+            settlement_records.append({
+                '정산월': current_month,
+                '병원명': normalize_hospital(hospital),
+                '고객명': str(vals[2]).strip() if vals[2] else '',
+                '국적': str(vals[4]).strip() if vals[4] else '',
+                '구분': kind,
+                '시술금액': amount,
+                '수수료금액': _to_num(vals[8]) or 0,
+            })
+    return settlement_records
+
 
 @st.cache_data(show_spinner=False, ttl=600)
 def load_operation_excel(file_path):
@@ -379,57 +475,8 @@ def load_operation_excel(file_path):
     if settle_sheet is None:
         raise ValueError(f"정산 시트를 찾을 수 없습니다. 시트 목록: {wb.sheetnames}")
     ws2 = wb[settle_sheet]
-    settlement_records = []
-    current_month = None
-    for row in ws2.iter_rows(min_row=1, max_row=ws2.max_row, values_only=False):
-        vals = [c.value for c in row]
-        a_val = str(vals[0]).strip() if vals[0] else ''
-        if '정산 내역' in a_val:
-            parts = a_val.replace('년', '-').replace('월', '').replace('정산 내역', '').strip()
-            try:
-                year, month = parts.split('-')[:2]
-                current_month = f"{year.strip()}-{int(month.strip()):02d}"
-            except Exception:
-                pass
-            continue
-        if a_val in ('NO', 'NO.', '', 'None', '재무팀 정산 요청 내역') or '정산 요청일' in a_val:
-            continue
-        if current_month and vals[1]:
-            hospital = str(vals[1]).strip()
-            if hospital in ('병원명', ''):
-                continue
-
-            def _to_num(v):
-                if v is None or v == '':
-                    return None
-                if isinstance(v, (int, float)):
-                    return float(v)
-                try:
-                    return float(str(v).replace('₩', '').replace(',', '').strip())
-                except ValueError:
-                    return None
-
-            # 구분(시술/수술 텍스트)과 시술금액(숫자) 칸이 일부 월에서 바뀌어 입력됨
-            # → 숫자인 칸 = 금액, 텍스트인 칸 = 구분 으로 자동 판별
-            c6, c7 = vals[6], vals[7]
-            n6, n7 = _to_num(c6), _to_num(c7)
-            if n6 is not None and n7 is None:
-                amount, kind = n6, str(c7).strip() if c7 else ''
-            elif n7 is not None and n6 is None:
-                amount, kind = n7, str(c6).strip() if c6 else ''
-            else:
-                # 판별 불가 시 헤더 순서(구분=6, 금액=7) 사용
-                amount = n7 if n7 is not None else 0
-                kind = str(c6).strip() if c6 else ''
-            settlement_records.append({
-                '정산월': current_month,
-                '병원명': normalize_hospital(hospital),
-                '고객명': str(vals[2]).strip() if vals[2] else '',
-                '국적': str(vals[4]).strip() if vals[4] else '',
-                '구분': kind,
-                '시술금액': amount,
-                '수수료금액': _to_num(vals[8]) or 0,
-            })
+    settlement_records = parse_settlement_rows(
+        [c.value for c in row] for row in ws2.iter_rows(min_row=1, max_row=ws2.max_row))
     wb.close()
     df_settle = pd.DataFrame(settlement_records)
 
@@ -546,7 +593,9 @@ def merge_sources(op_completed, op_all, op_settle, ad_completed, ad_all,
     if op_settle is not None and len(op_settle) > 0:
         base = op_settle[~op_settle['정산월'].isin(ov_months)]
         sheet_settle_months = set(base['정산월'].unique())
-        settle_parts.append(base.copy())
+        base = base.copy()
+        base['_확정'] = base['정산월'] >= cutoff
+        settle_parts.append(base)
     if len(ad_c) > 0:
         ad_settle = pd.DataFrame({
             '정산월': _agg_month_series(ad_c),
@@ -818,6 +867,17 @@ with st.sidebar:
             st.success("운영 데이터 로드 완료")
         except Exception as e:
             st.error(f"운영 데이터 로드 실패: {str(e)[:50]}")
+
+        # 정산은 재무팀 공유 탭(운영시트 원본)이 정답. 대시보드용 사본 시트는 2026-06에서 멈춰 있다.
+        if df_completed is not None:
+            try:
+                with st.spinner("재무팀 정산 탭 불러오는 중..."):
+                    _fin = load_finance_settlement()
+                df_settle, df_settle_sheet = _fin, _fin.copy()
+                _fm = valid_months(_fin['정산월'].unique())
+                st.success(f"재무팀 정산 연결 완료 ({_fm[0]} ~ {_fm[-1]})")
+            except Exception as e:
+                st.warning(f"재무팀 정산 탭 연결 실패, 사본 시트 정산 사용: {str(e)[:80]}")
 
         # 2026-07 이후 내원분은 어드민 원천으로 교체
         # 1순위: 운영시트의 어드민 raw 탭 (배포본) → 2순위: 로컬 Downloads CSV
